@@ -9,7 +9,7 @@ function angleDelta(a, b) {
   return Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 }
 
-function hitMelee(attack) {
+function findMeleeTarget(attack) {
   const player = state.player;
   let target = null;
   let bestDistance = attack.range;
@@ -21,6 +21,11 @@ function hitMelee(attack) {
       bestDistance = targetDistance;
     }
   }
+  return target;
+}
+
+function hitMelee(attack) {
+  const target = findMeleeTarget(attack);
   if (!target) return;
   target.hp -= attack.damage;
   target.staggerTimer = Math.max(target.staggerTimer || 0, attack.stagger);
@@ -35,10 +40,12 @@ export function attack() {
   if (player.cooldown > 0) return;
   if (!weapon.gun) {
     if (player.dodgeTimer > 0 || player.stamina < weapon.staminaCost) return;
+    const pendingAttack = { ...weapon, angle: player.angle };
+    if (!findMeleeTarget(pendingAttack)) return;
     player.cooldown = weapon.cooldown;
     player.stamina -= weapon.staminaCost;
     player.attackTimer = weapon.windup;
-    player.pendingAttack = { ...weapon, angle: player.angle };
+    player.pendingAttack = pendingAttack;
     return;
   }
   player.cooldown = weapon.cooldown;

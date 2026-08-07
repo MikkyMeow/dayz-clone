@@ -46,7 +46,7 @@ test('melee damage lands after the readable windup, not on button press', () => 
   assert.ok(zombie.staggerTimer > 0, 'a hit should interrupt the zombie');
 });
 
-test('melee attacks miss targets outside the aimed sector', () => {
+test('melee attacks do not start without a target in the aimed sector', () => {
   stateModule.resetState();
   const player = stateModule.state.player;
   player.x = 100;
@@ -54,8 +54,24 @@ test('melee attacks miss targets outside the aimed sector', () => {
   player.angle = 0;
   const zombie = zombieAt(100, 140);
   stateModule.state.zombies.push(zombie);
+  const staminaBefore = player.stamina;
 
   attack();
-  updateCombat(C.weapons[0].windup + .01);
+  assert.equal(player.pendingAttack, null);
+  assert.equal(player.cooldown, 0);
+  assert.equal(player.stamina, staminaBefore);
   assert.equal(zombie.hp, C.zombie.health);
+});
+
+test('melee attacks do not start when all zombies are out of reach', () => {
+  stateModule.resetState();
+  const player = stateModule.state.player;
+  player.x = 100;
+  player.y = 100;
+  player.angle = 0;
+  stateModule.state.zombies.push(zombieAt(100 + C.weapons[0].range + 1, 100));
+
+  attack();
+  assert.equal(player.pendingAttack, null);
+  assert.equal(player.cooldown, 0);
 });
