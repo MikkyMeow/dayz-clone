@@ -203,6 +203,18 @@ function segmentIntersectsRect(from, to, rect) {
   return true;
 }
 
+// Стена полностью останавливает атаку. Закрытая дверь пропускает только пулю,
+// поэтому здесь возвращается отдельный коэффициент урона для стрельбы.
+export function attackPath(from, to) {
+  let throughDoor = false;
+  for (const obstacle of obstacles) {
+    if (!segmentIntersectsRect(from, to, obstacle)) continue;
+    if (!obstacle.door) return { blocked: true, damageMultiplier: 0 };
+    throughDoor = true;
+  }
+  return { blocked: false, damageMultiplier: throughDoor ? .5 : 1 };
+}
+
 // Универсальный запрос прямой проходимости. Clearance позволяет проверять не
 // луч, а коридор для круглого агента. Навигация и зрение используют один API,
 // хотя для зрения clearance обычно равен нулю.

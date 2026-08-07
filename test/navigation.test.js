@@ -7,7 +7,7 @@ globalThis.window = {};
 vm.runInThisContext(fs.readFileSync(new URL('../config.js', import.meta.url), 'utf8'));
 
 const { C } = await import('../js/config.js');
-const { buildings, doorIsBlocked, findNearbyDoor, hasClearPath, hasLineOfSight, isWalkable, resetDoors, toggleDoor } = await import('../js/world.js');
+const { attackPath, buildings, doorIsBlocked, findNearbyDoor, hasClearPath, hasLineOfSight, isWalkable, resetDoors, toggleDoor } = await import('../js/world.js');
 const { beginNavigationFrame, findPath, invalidateNavigation, projectToWalkable } = await import('../js/navigation.js');
 
 test('world geometry blocks sight and movement through a building', () => {
@@ -15,6 +15,7 @@ test('world geometry blocks sight and movement through a building', () => {
   const to = { x: 570, y: 480 };
   assert.equal(hasLineOfSight(from, to), false);
   assert.equal(hasClearPath(from, to, C.zombie.navigationClearance), false);
+  assert.deepEqual(attackPath(from, to), { blocked: true, damageMultiplier: 0 });
 });
 
 test('A* returns a valid smoothed route around a building', () => {

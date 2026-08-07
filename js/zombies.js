@@ -268,7 +268,8 @@ function updateAttack(zombie, dt) {
   zombie.attackTimer -= dt;
   if (zombie.attackTimer > 0) return;
   zombie.cooldown = C.zombie.attackCooldown + C.zombie.attackRecovery;
-  if (distance(zombie, player) <= player.r + zombie.r + C.zombie.attackReach + 4 && player.invulnerableTimer <= 0) {
+  if (distance(zombie, player) <= player.r + zombie.r + C.zombie.attackReach + 4 &&
+      player.invulnerableTimer <= 0 && hasClearPath(zombie, player)) {
     player.hp -= C.zombie.damage;
     burst(player.x, player.y, '#b84e43', 5);
   }

@@ -3,7 +3,7 @@ import { burst } from './effects.js';
 import { state } from './state.js';
 import { emitNoise } from './noise.js';
 import { distance } from './utils.js';
-import { moveCircle } from './world.js';
+import { attackPath, hasClearPath, moveCircle } from './world.js';
 
 function angleDelta(a, b) {
   return Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
@@ -16,7 +16,8 @@ function findMeleeTarget(attack) {
   for (const zombie of state.zombies) {
     const targetDistance = distance(player, zombie);
     const targetAngle = Math.atan2(zombie.y - player.y, zombie.x - player.x);
-    if (targetDistance < bestDistance && angleDelta(targetAngle, attack.angle) < attack.arc) {
+    if (targetDistance < bestDistance && angleDelta(targetAngle, attack.angle) < attack.arc &&
+        hasClearPath(player, zombie)) {
       target = zombie;
       bestDistance = targetDistance;
     }
@@ -74,7 +75,9 @@ export function attack() {
   }
 
   if (!target) return;
-  target.hp -= weapon.damage;
+  const path = attackPath(player, target);
+  if (path.blocked) return;
+  target.hp -= weapon.damage * path.damageMultiplier;
   burst(target.x, target.y, '#7d302c', 7);
   if (target.hp <= 0) state.zombies.splice(state.zombies.indexOf(target), 1);
 }
