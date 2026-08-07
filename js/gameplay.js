@@ -2,6 +2,7 @@ import { C } from './config.js';
 import { attack } from './combat.js';
 import { updateEffects } from './effects.js';
 import { keys, pointer, refreshMouseAim, sticks } from './input.js';
+import { emitNoise, updateNoises } from './noise.js';
 import { state } from './state.js';
 import { showGameOver, showMessage, selectWeaponUI, updateUI } from './ui.js';
 import { clamp, distance } from './utils.js';
@@ -68,7 +69,25 @@ function updatePlayer(dt) {
 
   const speed = C.player.speed * (player.crouching ? C.player.crouchSpeedMultiplier : running ? 1 : .5);
   const moveLength = Math.hypot(moveX, moveY) || 1;
+  const oldX = player.x;
+  const oldY = player.y;
   moveCircle(player, moveX / moveLength * speed * dt, moveY / moveLength * speed * dt);
+  const travelled = Math.hypot(player.x - oldX, player.y - oldY);
+  if (moving && travelled > 0) {
+    player.footstepDistance += travelled;
+    if (player.footstepDistance >= C.zombie.footstepDistance) {
+      player.footstepDistance %= C.zombie.footstepDistance;
+      emitNoise(
+        player,
+        player.crouching
+          ? C.zombie.crouchNoiseRadius
+          : running ? C.zombie.runNoiseRadius : C.zombie.walkNoiseRadius,
+        player.crouching ? 'crouching' : running ? 'running' : 'walking'
+      );
+    }
+  } else if (!moving) {
+    player.footstepDistance = 0;
+  }
 
   refreshMouseAim();
   if (sticks.aim && Math.hypot(sticks.aim.dx, sticks.aim.dy) > .2) {
@@ -116,6 +135,7 @@ export function updateGame(dt) {
   }
 
   updateZombies(dt);
+  updateNoises();
   updateEffects(dt);
   pickupLoot();
   updateUI();

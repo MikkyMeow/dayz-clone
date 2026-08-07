@@ -83,6 +83,59 @@ function drawEntities() {
   ctx.globalAlpha = 1;
 }
 
+function drawZombieDebug() {
+  if (!C.debug?.zombieAI) return;
+  ctx.save();
+  ctx.font = '11px monospace';
+  ctx.lineWidth = 1;
+  for (const zombie of state.zombies) {
+    const visionDistance = state.player.crouching
+      ? C.zombie.crouchVisionDistance
+      : C.zombie.visionDistance;
+    ctx.fillStyle = 'rgba(238, 214, 112, .08)';
+    ctx.beginPath();
+    ctx.moveTo(zombie.x, zombie.y);
+    ctx.arc(
+      zombie.x,
+      zombie.y,
+      visionDistance,
+      zombie.angle - C.zombie.visionAngle / 2,
+      zombie.angle + C.zombie.visionAngle / 2
+    );
+    ctx.closePath();
+    ctx.fill();
+
+    if (zombie.path?.length) {
+      ctx.strokeStyle = '#e6cf61';
+      ctx.beginPath();
+      ctx.moveTo(zombie.x, zombie.y);
+      for (let i = zombie.pathIndex; i < zombie.path.length; i++) {
+        ctx.lineTo(zombie.path[i].x, zombie.path[i].y);
+      }
+      ctx.stroke();
+      const waypoint = zombie.path[zombie.pathIndex];
+      if (waypoint) {
+        ctx.fillStyle = '#fff17a';
+        ctx.fillRect(waypoint.x - 3, waypoint.y - 3, 6, 6);
+      }
+    }
+
+    const known = zombie.lastSeenAt >= zombie.lastHeardAt
+      ? zombie.lastSeenPosition
+      : zombie.lastHeardPosition;
+    if (known) {
+      ctx.strokeStyle = '#e47b61';
+      ctx.beginPath();
+      ctx.arc(known.x, known.y, 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#f4f0d7';
+    ctx.fillText(`${zombie.behaviorState}: ${zombie.stateReason}`, zombie.x + 20, zombie.y - 18);
+  }
+  ctx.restore();
+}
+
 function drawDayNight() {
   const phase = (Math.sin(state.time / C.day.lengthSeconds * Math.PI * 2 - Math.PI / 2) + 1) / 2;
   const alpha = (1 - phase) * C.day.darkness;
@@ -121,6 +174,7 @@ export function drawGame() {
   ctx.translate(-cameraX, -cameraY);
   drawWorld();
   drawEntities();
+  drawZombieDebug();
   ctx.restore();
   drawDayNight();
   drawSticks();

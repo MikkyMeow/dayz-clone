@@ -42,9 +42,10 @@ export function resetState() {
       x: spawn.x, y: spawn.y, r: C.player.radius,
       hp: C.player.maxHealth, hunger: C.player.maxHunger, stamina: C.player.maxStamina,
       exhausted: false, crouching: false, angle: 0, weapon: 0,
-      food: 0, medkits: 0, cooldown: 0
+      food: 0, medkits: 0, cooldown: 0,
+      footstepDistance: 0
     },
-    zombies: [], loot: [], particles: [], shots: [], spawnTimer: 0
+    zombies: [], loot: [], particles: [], shots: [], noises: [], spawnTimer: 0
   };
   seedLoot();
   return state;

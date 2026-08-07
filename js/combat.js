@@ -1,6 +1,7 @@
 import { C } from './config.js';
 import { burst } from './effects.js';
 import { state } from './state.js';
+import { emitNoise } from './noise.js';
 import { distance } from './utils.js';
 
 export function attack() {
@@ -31,9 +32,7 @@ export function attack() {
       y2: player.y + Math.sin(player.angle) * weapon.range,
       life: .07
     });
-    state.zombies.forEach(zombie => {
-      if (distance(zombie, player) < C.zombie.gunshotDistance) zombie.aggro = true;
-    });
+    emitNoise(player, C.zombie.gunshotDistance, 'gunshot', 1);
     burst(player.x + Math.cos(player.angle) * 22, player.y + Math.sin(player.angle) * 22, '#ffd56a', 5);
   }
 
