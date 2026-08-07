@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#151813">
+  <title>Мёртвая зона</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <canvas id="game" aria-label="Игровое поле"></canvas>
+
+  <section id="menu" class="overlay">
+    <div class="card">
+      <p class="eyebrow">МОБИЛЬНАЯ ВЫЖИВАЛКА</p>
+      <h1>Мёртвая зона</h1>
+      <p>Ищи припасы, следи за голодом и не шуми без нужды.</p>
+      <button id="start">Начать выживание</button>
+      <small>WASD / стрелки — движение · мышь — прицел · ЛКМ — атака<br>На планшете используй круги внизу экрана.</small>
+    </div>
+  </section>
+
+  <section id="gameover" class="overlay hidden">
+    <div class="card">
+      <p class="eyebrow danger">ВЫ ПОГИБЛИ</p>
+      <h2 id="survivalTime">Продержались 0:00</h2>
+      <button id="restart">Попробовать снова</button>
+    </div>
+  </section>
+
+  <div id="hud" class="hidden">
+    <div class="status-panel">
+      <div class="status-row"><span>ЗДОРОВЬЕ</span><b id="hpText">100</b></div>
+      <div class="bar"><i id="hpBar" class="hp"></i></div>
+      <div class="status-row"><span>СЫТОСТЬ</span><b id="hungerText">100</b></div>
+      <div class="bar"><i id="hungerBar" class="hunger"></i></div>
+    </div>
+    <div id="location">ДИКАЯ МЕСТНОСТЬ</div>
+    <div id="weapon">КУЛАКИ</div>
+    <div id="message"></div>
+    <div id="inventory">
+      <button data-slot="0">1<br><span>Кулаки</span></button>
+      <button data-slot="1">2<br><span>Нож</span></button>
+      <button data-slot="2">3<br><span>Пистолет</span></button>
+      <button id="useFood">Еда <b id="foodCount">0</b></button>
+      <button id="useMedkit">Аптечка <b id="medkitCount">0</b></button>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
