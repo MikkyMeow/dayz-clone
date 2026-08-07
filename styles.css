@@ -150,6 +150,26 @@ button {
   opacity: 0;
   transition: opacity 0.25s;
 }
+#crouch {
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(95px, calc(env(safe-area-inset-bottom) + 81px));
+  padding: 9px 12px;
+  pointer-events: auto;
+  color: #c9cfbe;
+  background: #171a16db;
+  border-color: #51594a;
+  font-size: 11px;
+}
+#crouch.active {
+  color: white;
+  border-color: #d8d8a5;
+  background: #59634d;
+}
+#crouch span {
+  margin-left: 5px;
+  color: #929b87;
+}
 #inventory {
   position: absolute;
   bottom: max(14px, env(safe-area-inset-bottom));

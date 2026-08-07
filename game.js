@@ -3,7 +3,7 @@
   const C = window.GAME_CONFIG;
   const canvas = document.querySelector('#game');
   const ctx = canvas.getContext('2d', { alpha: false });
-  const ui = Object.fromEntries(['menu','gameover','hud','start','restart','hpText','hpBar','hungerText','hungerBar','staminaText','staminaBar','weapon','message','foodCount','medkitCount','useFood','useMedkit','location','survivalTime'].map(id => [id, document.querySelector('#' + id)]));
+  const ui = Object.fromEntries(['menu','gameover','hud','start','restart','hpText','hpBar','hungerText','hungerBar','staminaText','staminaBar','weapon','message','crouch','foodCount','medkitCount','useFood','useMedkit','location','survivalTime'].map(id => [id, document.querySelector('#' + id)]));
   let W = 0, H = 0, dpr = 1, state, last = 0, raf = 0, messageTimer = 0;
   const keys = new Set(), pointer = { x: 0, y: 0, down: false };
   const sticks = { move: null, aim: null };
@@ -37,7 +37,7 @@
 
   function reset(){
     const spawn=randomSpawnPoint(C.player.radius);
-    state={ running:true, time:0, player:{x:spawn.x,y:spawn.y,r:C.player.radius,hp:C.player.maxHealth,hunger:C.player.maxHunger,stamina:C.player.maxStamina,exhausted:false,angle:0,weapon:0,food:0,medkits:0,cooldown:0}, zombies:[],loot:[],particles:[],shots:[],spawnTimer:0 };
+    state={ running:true, time:0, player:{x:spawn.x,y:spawn.y,r:C.player.radius,hp:C.player.maxHealth,hunger:C.player.maxHunger,stamina:C.player.maxStamina,exhausted:false,crouching:false,angle:0,weapon:0,food:0,medkits:0,cooldown:0}, zombies:[],loot:[],particles:[],shots:[],spawnTimer:0 };
     seedLoot(); selectWeapon(0); updateUI();
   }
   function seedLoot(){
@@ -58,12 +58,13 @@
     let mx=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0), my=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);
     if(sticks.move){ mx=sticks.move.dx; my=sticks.move.dy; }
     const moving=Math.hypot(mx,my)>0;
-    const runRequested=sticks.move?sticks.move.outside:keys.has('shift');
+    const runRequested=!p.crouching&&(sticks.move?sticks.move.outside:keys.has('shift'));
     if(!runRequested)p.exhausted=false;
     const running=moving&&runRequested&&!p.exhausted&&p.stamina>0;
-    if(running){p.stamina=Math.max(0,p.stamina-C.player.staminaDrainPerSecond*dt);if(p.stamina===0)p.exhausted=true;}
+    const crouchMoving=moving&&p.crouching&&p.stamina>0;
+    if(running||crouchMoving){p.stamina=Math.max(0,p.stamina-C.player.staminaDrainPerSecond*dt);if(p.stamina===0){p.exhausted=true;p.crouching=false;}}
     else {p.stamina=Math.min(C.player.maxStamina,p.stamina+C.player.staminaRegenPerSecond*dt);if(p.stamina===C.player.maxStamina)p.exhausted=false;}
-    const moveSpeed=C.player.speed*(running?1:.5);
+    const moveSpeed=C.player.speed*(p.crouching?C.player.crouchSpeedMultiplier:running?1:.5);
     const ml=Math.hypot(mx,my)||1; moveCircle(p,mx/ml*moveSpeed*dt,my/ml*moveSpeed*dt);
     if(sticks.aim && Math.hypot(sticks.aim.dx,sticks.aim.dy)>.2){ p.angle=Math.atan2(sticks.aim.dy,sticks.aim.dx); attack(); }
     else if(pointer.down) attack();
@@ -80,7 +81,7 @@
   }
   function updateZombies(dt){
     const p=state.player;
-    for(let i=state.zombies.length-1;i>=0;i--){ const z=state.zombies[i],d=dist(z,p); if(d>C.zombie.despawnDistance){state.zombies.splice(i,1);continue;} if(d<C.zombie.aggroDistance)z.aggro=true; z.cooldown-=dt;
+    for(let i=state.zombies.length-1;i>=0;i--){ const z=state.zombies[i],d=dist(z,p),aggroDistance=p.crouching?C.zombie.crouchAggroDistance:C.zombie.aggroDistance; if(d>C.zombie.despawnDistance){state.zombies.splice(i,1);continue;} if(d<aggroDistance)z.aggro=true; z.cooldown-=dt;
       if(z.aggro){ z.angle=Math.atan2(p.y-z.y,p.x-z.x); if(d>p.r+z.r+2) moveCircle(z,Math.cos(z.angle)*z.speed*dt,Math.sin(z.angle)*z.speed*dt); else if(z.cooldown<=0){p.hp-=C.zombie.damage;z.cooldown=C.zombie.attackCooldown;burst(p.x,p.y,'#b84e43',5);}}
     }
   }
@@ -96,9 +97,11 @@
   function burst(x,y,color,n){for(let i=0;i<n;i++)state.particles.push({x,y,vx:rand(-55,55),vy:rand(-55,55),life:rand(.2,.5),color});}
   function updateParticles(dt){state.particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;});state.particles=state.particles.filter(p=>p.life>0);state.shots.forEach(s=>s.life-=dt);state.shots=state.shots.filter(s=>s.life>0);}
   function selectWeapon(n){if(!state)return;state.player.weapon=n;document.querySelectorAll('[data-slot]').forEach((b,i)=>b.classList.toggle('selected',i===n));ui.weapon.textContent=C.weapons[n].name;}
+  function toggleCrouch(){if(!state?.running||state.player.stamina<=0)return;state.player.crouching=!state.player.crouching;updateUI();}
   document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>selectWeapon(+b.dataset.slot));
+  ui.crouch.onclick=toggleCrouch;
   function showMessage(s){ui.message.textContent=s;ui.message.style.opacity=1;clearTimeout(messageTimer);messageTimer=setTimeout(()=>ui.message.style.opacity=0,1300);}
-  function updateUI(){const p=state.player;ui.hpText.textContent=Math.ceil(p.hp);ui.hungerText.textContent=Math.ceil(p.hunger);ui.staminaText.textContent=Math.ceil(p.stamina);ui.hpBar.style.width=clamp(p.hp,0,100)+'%';ui.hungerBar.style.width=p.hunger+'%';ui.staminaBar.style.width=p.stamina/C.player.maxStamina*100+'%';ui.foodCount.textContent=p.food;ui.medkitCount.textContent=p.medkits;const here=landmarks.find(l=>p.x>l.x&&p.x<l.x+l.w&&p.y>l.y&&p.y<l.y+l.h);ui.location.textContent=here?here.name:'ДИКАЯ МЕСТНОСТЬ';}
+  function updateUI(){const p=state.player;ui.hpText.textContent=Math.ceil(p.hp);ui.hungerText.textContent=Math.ceil(p.hunger);ui.staminaText.textContent=Math.ceil(p.stamina);ui.hpBar.style.width=clamp(p.hp,0,100)+'%';ui.hungerBar.style.width=p.hunger+'%';ui.staminaBar.style.width=p.stamina/C.player.maxStamina*100+'%';ui.crouch.classList.toggle('active',p.crouching);ui.crouch.firstChild.textContent=p.crouching?'ВСТАТЬ ':'ПРИСЕСТЬ ';ui.foodCount.textContent=p.food;ui.medkitCount.textContent=p.medkits;const here=landmarks.find(l=>p.x>l.x&&p.x<l.x+l.w&&p.y>l.y&&p.y<l.y+l.h);ui.location.textContent=here?here.name:'ДИКАЯ МЕСТНОСТЬ';}
   function die(){state.running=false;ui.hud.classList.add('hidden');ui.gameover.classList.remove('hidden');ui.survivalTime.textContent='Продержались '+Math.floor(state.time/60)+':'+String(Math.floor(state.time%60)).padStart(2,'0');}
 
   function draw(){
@@ -107,16 +110,16 @@
     ponds.forEach(q=>{ctx.fillStyle='#294c52';ctx.beginPath();ctx.ellipse(q.x,q.y,q.rx,q.ry,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#527064';ctx.lineWidth=7;ctx.stroke();});
     landmarks.forEach(l=>{ctx.fillStyle=l.color;ctx.fillRect(l.x,l.y,l.w,l.h);ctx.fillStyle='#23271f';l.buildings.forEach(b=>{ctx.fillRect(...b);ctx.strokeStyle='#8a846d';ctx.lineWidth=3;ctx.strokeRect(...b);});});
     state.loot.forEach(l=>{ctx.fillStyle=l.type==='food'?'#c7a34b':'#e5e1d5';ctx.fillRect(l.x-7,l.y-7,14,14);ctx.fillStyle=l.type==='food'?'#765922':'#b84d46';ctx.fillRect(l.x-3,l.y-3,6,6);});
-    state.zombies.forEach(z=>drawPerson(z,'#71815b',z.angle));drawPerson(p,C.weapons[p.weapon].color,p.angle);
+    state.zombies.forEach(z=>drawPerson(z,'#71815b',z.angle));drawPerson(p,C.weapons[p.weapon].color,p.angle,p.crouching);
     state.shots.forEach(s=>{ctx.strokeStyle='#ffeab0';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();});state.particles.forEach(q=>{ctx.globalAlpha=Math.min(1,q.life*4);ctx.fillStyle=q.color;ctx.fillRect(q.x-2,q.y-2,4,4);});ctx.globalAlpha=1;ctx.restore();
     const phase=(Math.sin(state.time/C.day.lengthSeconds*Math.PI*2-Math.PI/2)+1)/2,alpha=(1-phase)*C.day.darkness;if(alpha>.02){ctx.fillStyle=`rgba(8,12,18,${alpha})`;ctx.fillRect(0,0,W,H);}
     drawSticks();
   }
-  function drawPerson(o,color,angle){ctx.save();ctx.translate(o.x,o.y);ctx.rotate(angle);ctx.fillStyle='#151713';ctx.fillRect(-10,-11,25,22);ctx.fillStyle=color;ctx.beginPath();ctx.arc(0,0,o.r,0,Math.PI*2);ctx.fill();ctx.fillStyle='#1b1d18';ctx.fillRect(8,-3,15,6);ctx.restore();}
+  function drawPerson(o,color,angle,crouching=false){ctx.save();ctx.translate(o.x,o.y);ctx.rotate(angle);if(crouching)ctx.scale(.82,1.18);ctx.fillStyle='#151713';ctx.fillRect(-10,-11,25,22);ctx.fillStyle=color;ctx.beginPath();ctx.arc(0,0,crouching?o.r*.82:o.r,0,Math.PI*2);ctx.fill();if(crouching){ctx.fillStyle='#252920';ctx.fillRect(-8,-18,8,8);ctx.fillRect(-8,10,8,8);}ctx.fillStyle='#1b1d18';ctx.fillRect(8,-3,15,6);ctx.restore();}
   function drawSticks(){if(!matchMedia('(pointer: coarse)').matches)return;[[W*.16,H*.76,sticks.move],[W*.84,H*.76,sticks.aim]].forEach(([x,y,s])=>{ctx.globalAlpha=.35;ctx.fillStyle='#0e110d';ctx.beginPath();ctx.arc(x,y,58,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#c6cdb8';ctx.stroke();if(s){ctx.fillStyle='#7b886c';ctx.beginPath();ctx.arc(x+s.dx*40,y+s.dy*40,23,0,Math.PI*2);ctx.fill();}});ctx.globalAlpha=1;}
   function loop(now){if(!state?.running)return;const dt=Math.min((now-last)/1000,.05);last=now;update(dt);draw();raf=requestAnimationFrame(loop);}
 
-  addEventListener('keydown',e=>{keys.add(e.key.toLowerCase());if('123'.includes(e.key))selectWeapon(+e.key-1);if(e.key.toLowerCase()==='f')use('food');if(e.key.toLowerCase()==='h')use('medkit');});addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+  addEventListener('keydown',e=>{const key=e.key.toLowerCase();keys.add(key);if('123'.includes(e.key))selectWeapon(+e.key-1);if(key==='f')use('food');if(key==='h')use('medkit');if(key==='c'&&!e.repeat)toggleCrouch();});addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
   canvas.addEventListener('pointermove',e=>{pointer.x=e.clientX;pointer.y=e.clientY;if(state&&!sticks.move&&!sticks.aim)state.player.angle=Math.atan2(e.clientY-H/2,e.clientX-W/2);updateStick(e);});canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);if(e.pointerType==='touch'){const side=e.clientX<W/2?'move':'aim';sticks[side]={id:e.pointerId,dx:0,dy:0,outside:false};updateStick(e);}else pointer.down=true;});canvas.addEventListener('pointerup',e=>{pointer.down=false;for(const k of ['move','aim'])if(sticks[k]?.id===e.pointerId)sticks[k]=null;});
   function updateStick(e){for(const [k,cx] of [['move',W*.16],['aim',W*.84]]){const s=sticks[k];if(s?.id===e.pointerId){let dx=(e.clientX-cx)/58,dy=(e.clientY-H*.76)/58,l=Math.hypot(dx,dy);s.outside=l>1;if(l>1){dx/=l;dy/=l;}s.dx=dx;s.dy=dy;}}}
 })();
