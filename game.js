@@ -5,7 +5,7 @@
   const ctx = canvas.getContext('2d', { alpha: false });
   const ui = Object.fromEntries(['menu','gameover','hud','start','restart','hpText','hpBar','hungerText','hungerBar','staminaText','staminaBar','weapon','message','crouch','foodCount','medkitCount','useFood','useMedkit','location','survivalTime'].map(id => [id, document.querySelector('#' + id)]));
   let W = 0, H = 0, dpr = 1, state, last = 0, raf = 0, messageTimer = 0;
-  const keys = new Set(), pointer = { x: 0, y: 0, down: false };
+  const keys = new Set(), pointer = { x: 0, y: 0, down: false, active: false };
   const sticks = { move: null, aim: null };
 
   const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
@@ -66,6 +66,7 @@
     else {p.stamina=Math.min(C.player.maxStamina,p.stamina+C.player.staminaRegenPerSecond*dt);if(p.stamina===C.player.maxStamina)p.exhausted=false;}
     const moveSpeed=C.player.speed*(p.crouching?C.player.crouchSpeedMultiplier:running?1:.5);
     const ml=Math.hypot(mx,my)||1; moveCircle(p,mx/ml*moveSpeed*dt,my/ml*moveSpeed*dt);
+    if(pointer.active&&!sticks.move&&!sticks.aim) updateMouseAim();
     if(sticks.aim && Math.hypot(sticks.aim.dx,sticks.aim.dy)>.2){ p.angle=Math.atan2(sticks.aim.dy,sticks.aim.dx); attack(); }
     else if(pointer.down) attack();
     p.hunger=clamp(p.hunger-C.player.hungerPerSecond*dt,0,C.player.maxHunger);
@@ -120,6 +121,7 @@
   function loop(now){if(!state?.running)return;const dt=Math.min((now-last)/1000,.05);last=now;update(dt);draw();raf=requestAnimationFrame(loop);}
 
   addEventListener('keydown',e=>{const key=e.key.toLowerCase();keys.add(key);if('123'.includes(e.key))selectWeapon(+e.key-1);if(key==='f')use('food');if(key==='h')use('medkit');if(key==='c'&&!e.repeat)toggleCrouch();});addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
-  canvas.addEventListener('pointermove',e=>{pointer.x=e.clientX;pointer.y=e.clientY;if(state&&!sticks.move&&!sticks.aim)state.player.angle=Math.atan2(e.clientY-H/2,e.clientX-W/2);updateStick(e);});canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);if(e.pointerType==='touch'){const side=e.clientX<W/2?'move':'aim';sticks[side]={id:e.pointerId,dx:0,dy:0,outside:false};updateStick(e);}else pointer.down=true;});canvas.addEventListener('pointerup',e=>{pointer.down=false;for(const k of ['move','aim'])if(sticks[k]?.id===e.pointerId)sticks[k]=null;});
+  function updateMouseAim(){const p=state.player,camX=clamp(p.x-W/2,0,Math.max(0,C.world.width-W)),camY=clamp(p.y-H/2,0,Math.max(0,C.world.height-H));p.angle=Math.atan2(pointer.y-(p.y-camY),pointer.x-(p.x-camX));}
+  canvas.addEventListener('pointermove',e=>{if(e.pointerType!=='touch'){const rect=canvas.getBoundingClientRect();pointer.x=e.clientX-rect.left;pointer.y=e.clientY-rect.top;pointer.active=true;if(state&&!sticks.move&&!sticks.aim)updateMouseAim();}updateStick(e);});canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);if(e.pointerType==='touch'){const side=e.clientX<W/2?'move':'aim';sticks[side]={id:e.pointerId,dx:0,dy:0,outside:false};updateStick(e);}else pointer.down=true;});canvas.addEventListener('pointerup',e=>{pointer.down=false;for(const k of ['move','aim'])if(sticks[k]?.id===e.pointerId)sticks[k]=null;});
   function updateStick(e){for(const [k,cx] of [['move',W*.16],['aim',W*.84]]){const s=sticks[k];if(s?.id===e.pointerId){let dx=(e.clientX-cx)/58,dy=(e.clientY-H*.76)/58,l=Math.hypot(dx,dy);s.outside=l>1;if(l>1){dx/=l;dy/=l;}s.dx=dx;s.dy=dy;}}}
 })();
