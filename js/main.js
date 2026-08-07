@@ -1,5 +1,5 @@
 import { bindInput } from './input.js';
-import { dodge, selectWeapon, toggleCrouch, updateGame, useItem } from './gameplay.js';
+import { dodge, interact, selectWeapon, toggleCrouch, updateGame, useItem } from './gameplay.js';
 import { drawGame } from './renderer.js';
 import { resetState, state } from './state.js';
 import { selectWeaponUI, showGame, ui, updateUI } from './ui.js';
@@ -26,12 +26,13 @@ function startGame() {
   animationFrame = requestAnimationFrame(loop);
 }
 
-bindInput({ dodge, selectWeapon, toggleCrouch, useItem });
+bindInput({ dodge, interact, selectWeapon, toggleCrouch, useItem });
 document.querySelectorAll('[data-slot]').forEach(button => {
   button.addEventListener('click', () => selectWeapon(Number(button.dataset.slot)));
 });
 ui.crouch.addEventListener('click', toggleCrouch);
 ui.dodge.addEventListener('click', dodge);
+ui.interact.addEventListener('click', interact);
 ui.useFood.addEventListener('click', () => useItem('food'));
 ui.useMedkit.addEventListener('click', () => useItem('medkit'));
 ui.start.addEventListener('click', startGame);

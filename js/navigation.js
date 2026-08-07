@@ -93,6 +93,10 @@ export function beginNavigationFrame() {
   searchesThisFrame = 0;
 }
 
+export function invalidateNavigation() {
+  grids.clear();
+}
+
 export function projectToWalkable(position, agentOptions = {}) {
   const clearance = agentOptions.clearance ?? C.zombie.navigationClearance;
   if (isWalkable(position, clearance)) return { x: position.x, y: position.y };

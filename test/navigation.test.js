@@ -7,8 +7,8 @@ globalThis.window = {};
 vm.runInThisContext(fs.readFileSync(new URL('../config.js', import.meta.url), 'utf8'));
 
 const { C } = await import('../js/config.js');
-const { hasClearPath, hasLineOfSight, isWalkable } = await import('../js/world.js');
-const { beginNavigationFrame, findPath, projectToWalkable } = await import('../js/navigation.js');
+const { buildings, doorIsBlocked, findNearbyDoor, hasClearPath, hasLineOfSight, isWalkable, resetDoors, toggleDoor } = await import('../js/world.js');
+const { beginNavigationFrame, findPath, invalidateNavigation, projectToWalkable } = await import('../js/navigation.js');
 
 test('world geometry blocks sight and movement through a building', () => {
   const from = { x: 360, y: 480 };
@@ -51,4 +51,41 @@ test('path search respects its per-frame budget', () => {
     assert.notEqual(findPath({ x: 100, y: 100 }, { x: 250, y: 100 }), null);
   }
   assert.equal(findPath({ x: 100, y: 100 }, { x: 250, y: 100 }), null);
+});
+
+test('every building has one or more doors with open and closed states', () => {
+  assert.ok(buildings.some(building => building.doors.length > 1));
+  for (const building of buildings) {
+    assert.ok(building.doors.length >= 1);
+    assert.equal(isWalkable({
+      x: building.x + building.w / 2,
+      y: building.y + building.h / 2
+    }, C.player.radius), true);
+
+    for (const door of building.doors) {
+      const point = door.side === 'top' || door.side === 'bottom'
+        ? { x: building.x + door.center, y: door.side === 'top' ? building.y + 4 : building.y + building.h - 4 }
+        : { x: door.side === 'left' ? building.x + 4 : building.x + building.w - 4, y: building.y + door.center };
+      assert.equal(findNearbyDoor(point), door);
+      assert.equal(isWalkable(point, C.player.radius), false);
+      toggleDoor(door);
+      assert.equal(isWalkable(point, C.player.radius), true);
+      assert.equal(door.open, true);
+    }
+  }
+  resetDoors();
+  invalidateNavigation();
+});
+
+test('an open door detects occupants standing in its doorway', () => {
+  const door = buildings[0].doors[0];
+  const building = door.building;
+  const point = door.side === 'top' || door.side === 'bottom'
+    ? { x: building.x + door.center, y: door.side === 'top' ? building.y + 4 : building.y + building.h - 4 }
+    : { x: door.side === 'left' ? building.x + 4 : building.x + building.w - 4, y: building.y + door.center };
+  toggleDoor(door);
+  assert.equal(doorIsBlocked(door, [{ ...point, r: C.player.radius }]), true);
+  assert.equal(doorIsBlocked(door, [{ x: point.x + 100, y: point.y + 100, r: C.player.radius }]), false);
+  resetDoors();
+  invalidateNavigation();
 });

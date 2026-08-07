@@ -14,9 +14,153 @@ export const ponds = [
   { x: 2840, y: 980, rx: 180, ry: 260 }
 ];
 
-export const obstacles = landmarks.flatMap(landmark =>
-  landmark.buildings.map(([x, y, w, h]) => ({ x, y, w, h }))
+const WALL_THICKNESS = 8;
+const DOOR_WIDTH = 54;
+
+// Двери выбираются псевдослучайно, но зависят только от геометрии здания:
+// при перезапуске навигация и внешний вид карты не начинают расходиться.
+function buildingRandom(x, y, w, h) {
+  let value = (x * 73856093 ^ y * 19349663 ^ w * 83492791 ^ h * 2654435761) >>> 0;
+  return () => {
+    value = (Math.imul(value, 1664525) + 1013904223) >>> 0;
+    return value / 4294967296;
+  };
+}
+
+function makeBuilding([x, y, w, h]) {
+  const next = buildingRandom(x, y, w, h);
+  const sides = ['top', 'right', 'bottom', 'left'];
+  const doorCount = next() < .58 ? 1 : Math.min(3, w > 180 || h > 150 ? 3 : 2);
+  const doors = [];
+
+  for (let i = 0; i < doorCount; i++) {
+    const sideIndex = Math.floor(next() * sides.length);
+    const side = sides.splice(sideIndex, 1)[0];
+    const length = side === 'top' || side === 'bottom' ? w : h;
+    const margin = DOOR_WIDTH / 2 + WALL_THICKNESS + 4;
+    const center = margin + next() * Math.max(0, length - margin * 2);
+    doors.push({ side, center, width: DOOR_WIDTH, open: false });
+  }
+  return { x, y, w, h, doors };
+}
+
+export const buildings = landmarks.flatMap(landmark =>
+  landmark.buildings.map(makeBuilding)
 );
+
+for (const building of buildings) {
+  for (const door of building.doors) door.building = building;
+}
+
+function wallSegments(building, side) {
+  const horizontal = side === 'top' || side === 'bottom';
+  const length = horizontal ? building.w : building.h;
+  const door = building.doors.find(candidate => candidate.side === side);
+  const ranges = door
+    ? [[0, door.center - door.width / 2], [door.center + door.width / 2, length]]
+    : [[0, length]];
+
+  return ranges.filter(([start, end]) => end > start).map(([start, end]) => {
+    if (horizontal) return {
+      x: building.x + start,
+      y: side === 'top' ? building.y : building.y + building.h - WALL_THICKNESS,
+      w: end - start,
+      h: WALL_THICKNESS
+    };
+    return {
+      x: side === 'left' ? building.x : building.x + building.w - WALL_THICKNESS,
+      y: building.y + start,
+      w: WALL_THICKNESS,
+      h: end - start
+    };
+  });
+}
+
+const walls = buildings.flatMap(building =>
+  ['top', 'right', 'bottom', 'left'].flatMap(side => wallSegments(building, side))
+);
+
+function doorObstacle(door) {
+  const building = door.building;
+  if (door.side === 'top' || door.side === 'bottom') return {
+    x: building.x + door.center - door.width / 2,
+    y: door.side === 'top' ? building.y : building.y + building.h - WALL_THICKNESS,
+    w: door.width,
+    h: WALL_THICKNESS,
+    door
+  };
+  return {
+    x: door.side === 'left' ? building.x : building.x + building.w - WALL_THICKNESS,
+    y: building.y + door.center - door.width / 2,
+    w: WALL_THICKNESS,
+    h: door.width,
+    door
+  };
+}
+
+export const obstacles = walls.slice();
+
+export function resetDoors() {
+  obstacles.splice(walls.length);
+  for (const building of buildings) {
+    for (const door of building.doors) {
+      door.open = false;
+      door.obstacle = doorObstacle(door);
+      obstacles.push(door.obstacle);
+    }
+  }
+}
+
+export function doorPosition(door) {
+  const building = door.building;
+  if (door.side === 'top' || door.side === 'bottom') return {
+    x: building.x + door.center,
+    y: door.side === 'top' ? building.y : building.y + building.h
+  };
+  return {
+    x: door.side === 'left' ? building.x : building.x + building.w,
+    y: building.y + door.center
+  };
+}
+
+export function findNearbyDoor(position, maxDistance = C.interaction.doorDistance) {
+  let nearest = null;
+  let nearestDistance = maxDistance;
+  for (const building of buildings) {
+    for (const door of building.doors) {
+      const point = doorPosition(door);
+      const distance = Math.hypot(position.x - point.x, position.y - point.y);
+      if (distance <= nearestDistance) {
+        nearest = door;
+        nearestDistance = distance;
+      }
+    }
+  }
+  return nearest;
+}
+
+function circleIntersectsRect(circle, rect) {
+  const closestX = clamp(circle.x, rect.x, rect.x + rect.w);
+  const closestY = clamp(circle.y, rect.y, rect.y + rect.h);
+  return Math.hypot(circle.x - closestX, circle.y - closestY) < circle.r;
+}
+
+export function doorIsBlocked(door, occupants) {
+  return occupants.some(occupant => circleIntersectsRect(occupant, door.obstacle));
+}
+
+export function toggleDoor(door) {
+  door.open = !door.open;
+  if (door.open) {
+    const index = obstacles.indexOf(door.obstacle);
+    if (index !== -1) obstacles.splice(index, 1);
+  } else if (!obstacles.includes(door.obstacle)) {
+    obstacles.push(door.obstacle);
+  }
+  return door.open;
+}
+
+resetDoors();
 
 export function collidesWithObstacle(object) {
   return obstacles.some(obstacle =>

@@ -59,6 +59,7 @@ window.GAME_CONFIG = Object.freeze({
     stuckMovementThreshold: 2
   },
   navigation: { cellSize: 40, maxSearchesPerFrame: 3 },
+  interaction: { doorDistance: 62 },
   debug: { zombieAI: false },
   weapons: [
     { name: 'КУЛАКИ', damage: 13, range: 48, cooldown: .46, windup: .16, arc: .82, knockback: 12, stagger: .18, staminaCost: 2, color: '#c4b29a' },

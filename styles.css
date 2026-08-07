@@ -150,6 +150,19 @@ button {
   opacity: 0;
   transition: opacity 0.25s;
 }
+#interact {
+  position: absolute;
+  left: 50%;
+  bottom: max(100px, calc(env(safe-area-inset-bottom) + 86px));
+  transform: translateX(-50%);
+  padding: 11px 16px;
+  pointer-events: auto;
+  color: #f2ecd7;
+  background: #403b2fdf;
+  border-color: #b49b63;
+  box-shadow: 0 4px 16px #0008;
+  white-space: nowrap;
+}
 #crouch {
   position: absolute;
   right: max(18px, env(safe-area-inset-right));

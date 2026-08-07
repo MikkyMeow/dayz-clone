@@ -1,6 +1,6 @@
 import { C } from './config.js';
 import { random } from './utils.js';
-import { landmarks, randomSpawnPoint } from './world.js';
+import { landmarks, randomSpawnPoint, resetDoors } from './world.js';
 
 export let state = null;
 
@@ -34,6 +34,7 @@ function seedLoot() {
 }
 
 export function resetState() {
+  resetDoors();
   const spawn = randomSpawnPoint(C.player.radius);
   state = {
     running: true,
@@ -48,7 +49,8 @@ export function resetState() {
       dodgeX: 0, dodgeY: 0, moveX: 0, moveY: 0,
       footstepDistance: 0
     },
-    zombies: [], loot: [], particles: [], shots: [], noises: [], spawnTimer: 0
+    zombies: [], loot: [], particles: [], shots: [], noises: [], spawnTimer: 0,
+    nearbyDoor: null
   };
   seedLoot();
   return state;

@@ -3,10 +3,11 @@ import { attack, updateCombat } from './combat.js';
 import { updateEffects } from './effects.js';
 import { keys, pointer, refreshMouseAim, sticks } from './input.js';
 import { emitNoise, updateNoises } from './noise.js';
+import { invalidateNavigation } from './navigation.js';
 import { state } from './state.js';
 import { showGameOver, showMessage, selectWeaponUI, updateUI } from './ui.js';
 import { clamp, distance } from './utils.js';
-import { moveCircle } from './world.js';
+import { doorIsBlocked, findNearbyDoor, moveCircle, toggleDoor } from './world.js';
 import { spawnZombie, updateZombies } from './zombies.js';
 
 export function selectWeapon(index) {
@@ -55,6 +56,21 @@ export function useItem(type) {
     player.hp = Math.min(C.player.maxHealth, player.hp + C.loot.medkitHeal);
     showMessage('Раны обработаны');
   }
+  updateUI();
+}
+
+export function interact() {
+  if (!state?.running) return;
+  const door = findNearbyDoor(state.player);
+  if (!door) return;
+  if (door.open && doorIsBlocked(door, [state.player, ...state.zombies])) {
+    showMessage('Проход заблокирован');
+    return;
+  }
+  const opened = toggleDoor(door);
+  invalidateNavigation();
+  state.nearbyDoor = door;
+  showMessage(opened ? 'Дверь открыта' : 'Дверь закрыта');
   updateUI();
 }
 
@@ -172,6 +188,7 @@ export function updateGame(dt) {
   updateNoises();
   updateEffects(dt);
   pickupLoot();
+  state.nearbyDoor = findNearbyDoor(state.player);
   updateUI();
 
   if (state.player.hp <= 0) {

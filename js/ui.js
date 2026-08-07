@@ -6,6 +6,7 @@ import { landmarks } from './world.js';
 const ids = ['menu', 'gameover', 'hud', 'start', 'restart', 'hpText', 'hpBar',
   'hungerText', 'hungerBar', 'staminaText', 'staminaBar', 'weapon', 'message',
   'crouch', 'dodge', 'foodCount', 'medkitCount', 'useFood', 'useMedkit', 'location', 'survivalTime'];
+ids.push('interact');
 
 export const ui = Object.fromEntries(ids.map(id => [id, document.querySelector(`#${id}`)]));
 let messageTimer = 0;
@@ -36,6 +37,10 @@ export function updateUI() {
   ui.crouch.firstChild.textContent = player.crouching ? 'ВСТАТЬ ' : 'ПРИСЕСТЬ ';
   ui.foodCount.textContent = player.food;
   ui.medkitCount.textContent = player.medkits;
+  ui.interact.classList.toggle('hidden', !state.nearbyDoor);
+  if (state.nearbyDoor) {
+    ui.interact.textContent = `E: ${state.nearbyDoor.open ? 'закрыть дверь' : 'открыть дверь'}`;
+  }
 
   const location = landmarks.find(landmark =>
     player.x > landmark.x && player.x < landmark.x + landmark.w &&

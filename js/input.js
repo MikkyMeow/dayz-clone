@@ -44,6 +44,7 @@ export function bindInput(actions) {
     if (key === 'f') actions.useItem('food');
     if (key === 'h') actions.useItem('medkit');
     if (key === 'c' && !event.repeat) actions.toggleCrouch();
+    if (key === 'e' && !event.repeat) actions.interact();
     if (key === ' ' && !event.repeat) {
       event.preventDefault();
       actions.dodge();

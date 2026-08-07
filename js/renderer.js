@@ -3,7 +3,7 @@ import { ctx, viewport } from './display.js';
 import { sticks } from './input.js';
 import { state } from './state.js';
 import { clamp } from './utils.js';
-import { landmarks, ponds } from './world.js';
+import { buildings, landmarks, ponds } from './world.js';
 
 function drawPerson(person, color, angle, crouching = false) {
   ctx.save();
@@ -49,13 +49,34 @@ function drawWorld() {
   landmarks.forEach(landmark => {
     ctx.fillStyle = landmark.color;
     ctx.fillRect(landmark.x, landmark.y, landmark.w, landmark.h);
-    ctx.fillStyle = '#23271f';
-    landmark.buildings.forEach(building => {
-      ctx.fillRect(...building);
-      ctx.strokeStyle = '#8a846d';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(...building);
-    });
+  });
+
+  buildings.forEach(building => {
+    ctx.fillStyle = '#34382e';
+    ctx.fillRect(building.x, building.y, building.w, building.h);
+    ctx.strokeStyle = '#8a846d';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(building.x + 4, building.y + 4, building.w - 8, building.h - 8);
+
+    // Закрытая дверь перекрывает проём, открытая повёрнута вдоль стены.
+    for (const door of building.doors) {
+      ctx.fillStyle = '#34382e';
+      if (door.side === 'top' || door.side === 'bottom') {
+        const x = building.x + door.center - door.width / 2;
+        const y = door.side === 'top' ? building.y : building.y + building.h - 8;
+        ctx.fillRect(x, y - 1, door.width, 10);
+        ctx.fillStyle = '#8b7047';
+        if (door.open) ctx.fillRect(x, door.side === 'top' ? y : y - door.width + 8, 7, door.width);
+        else ctx.fillRect(x, y, door.width, 8);
+      } else {
+        const x = door.side === 'left' ? building.x : building.x + building.w - 8;
+        const y = building.y + door.center - door.width / 2;
+        ctx.fillRect(x - 1, y, 10, door.width);
+        ctx.fillStyle = '#8b7047';
+        if (door.open) ctx.fillRect(door.side === 'left' ? x : x - door.width + 8, y, door.width, 7);
+        else ctx.fillRect(x, y, 8, door.width);
+      }
+    }
   });
 }
 
