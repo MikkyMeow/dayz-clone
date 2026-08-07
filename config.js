@@ -1,7 +1,7 @@
 // Все числа игрового баланса собраны здесь.
 window.GAME_CONFIG = Object.freeze({
   world: { width: 3200, height: 2400, grid: 80 },
-  player: { speed: 175, radius: 15, maxHealth: 100, maxHunger: 100, hungerPerSecond: 0.32, starvationDamagePerSecond: 3, regenPerSecond: 1.5, regenMinHunger: 65 },
+  player: { speed: 175, radius: 15, maxHealth: 100, maxHunger: 100, maxStamina: 30, staminaDrainPerSecond: 1, staminaRegenPerSecond: 1, hungerPerSecond: 0.32, starvationDamagePerSecond: 3, regenPerSecond: 1.5, regenMinHunger: 65 },
   zombie: { radius: 15, speedMin: 42, speedMax: 67, health: 50, damage: 9, attackCooldown: 1.1, spawnMinDistance: 390, spawnMaxDistance: 650, despawnDistance: 900, maxAlive: 28, spawnEvery: 1.35, aggroDistance: 240, gunshotDistance: 850 },
   weapons: [
     { name: 'КУЛАКИ', damage: 12, range: 45, cooldown: .42, color: '#c4b29a' },

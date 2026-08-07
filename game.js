@@ -3,7 +3,7 @@
   const C = window.GAME_CONFIG;
   const canvas = document.querySelector('#game');
   const ctx = canvas.getContext('2d', { alpha: false });
-  const ui = Object.fromEntries(['menu','gameover','hud','start','restart','hpText','hpBar','hungerText','hungerBar','weapon','message','foodCount','medkitCount','useFood','useMedkit','location','survivalTime'].map(id => [id, document.querySelector('#' + id)]));
+  const ui = Object.fromEntries(['menu','gameover','hud','start','restart','hpText','hpBar','hungerText','hungerBar','staminaText','staminaBar','weapon','message','foodCount','medkitCount','useFood','useMedkit','location','survivalTime'].map(id => [id, document.querySelector('#' + id)]));
   let W = 0, H = 0, dpr = 1, state, last = 0, raf = 0, messageTimer = 0;
   const keys = new Set(), pointer = { x: 0, y: 0, down: false };
   const sticks = { move: null, aim: null };
@@ -37,7 +37,7 @@
 
   function reset(){
     const spawn=randomSpawnPoint(C.player.radius);
-    state={ running:true, time:0, player:{x:spawn.x,y:spawn.y,r:C.player.radius,hp:C.player.maxHealth,hunger:C.player.maxHunger,angle:0,weapon:0,food:0,medkits:0,cooldown:0}, zombies:[],loot:[],particles:[],shots:[],spawnTimer:0 };
+    state={ running:true, time:0, player:{x:spawn.x,y:spawn.y,r:C.player.radius,hp:C.player.maxHealth,hunger:C.player.maxHunger,stamina:C.player.maxStamina,exhausted:false,angle:0,weapon:0,food:0,medkits:0,cooldown:0}, zombies:[],loot:[],particles:[],shots:[],spawnTimer:0 };
     seedLoot(); selectWeapon(0); updateUI();
   }
   function seedLoot(){
@@ -57,7 +57,12 @@
     const p=state.player; state.time+=dt; p.cooldown=Math.max(0,p.cooldown-dt);
     let mx=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0), my=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);
     if(sticks.move){ mx=sticks.move.dx; my=sticks.move.dy; }
-    const running=sticks.move?sticks.move.outside:keys.has('shift');
+    const moving=Math.hypot(mx,my)>0;
+    const runRequested=sticks.move?sticks.move.outside:keys.has('shift');
+    if(!runRequested)p.exhausted=false;
+    const running=moving&&runRequested&&!p.exhausted&&p.stamina>0;
+    if(running){p.stamina=Math.max(0,p.stamina-C.player.staminaDrainPerSecond*dt);if(p.stamina===0)p.exhausted=true;}
+    else {p.stamina=Math.min(C.player.maxStamina,p.stamina+C.player.staminaRegenPerSecond*dt);if(p.stamina===C.player.maxStamina)p.exhausted=false;}
     const moveSpeed=C.player.speed*(running?1:.5);
     const ml=Math.hypot(mx,my)||1; moveCircle(p,mx/ml*moveSpeed*dt,my/ml*moveSpeed*dt);
     if(sticks.aim && Math.hypot(sticks.aim.dx,sticks.aim.dy)>.2){ p.angle=Math.atan2(sticks.aim.dy,sticks.aim.dx); attack(); }
@@ -93,7 +98,7 @@
   function selectWeapon(n){if(!state)return;state.player.weapon=n;document.querySelectorAll('[data-slot]').forEach((b,i)=>b.classList.toggle('selected',i===n));ui.weapon.textContent=C.weapons[n].name;}
   document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>selectWeapon(+b.dataset.slot));
   function showMessage(s){ui.message.textContent=s;ui.message.style.opacity=1;clearTimeout(messageTimer);messageTimer=setTimeout(()=>ui.message.style.opacity=0,1300);}
-  function updateUI(){const p=state.player;ui.hpText.textContent=Math.ceil(p.hp);ui.hungerText.textContent=Math.ceil(p.hunger);ui.hpBar.style.width=clamp(p.hp,0,100)+'%';ui.hungerBar.style.width=p.hunger+'%';ui.foodCount.textContent=p.food;ui.medkitCount.textContent=p.medkits;const here=landmarks.find(l=>p.x>l.x&&p.x<l.x+l.w&&p.y>l.y&&p.y<l.y+l.h);ui.location.textContent=here?here.name:'ДИКАЯ МЕСТНОСТЬ';}
+  function updateUI(){const p=state.player;ui.hpText.textContent=Math.ceil(p.hp);ui.hungerText.textContent=Math.ceil(p.hunger);ui.staminaText.textContent=Math.ceil(p.stamina);ui.hpBar.style.width=clamp(p.hp,0,100)+'%';ui.hungerBar.style.width=p.hunger+'%';ui.staminaBar.style.width=p.stamina/C.player.maxStamina*100+'%';ui.foodCount.textContent=p.food;ui.medkitCount.textContent=p.medkits;const here=landmarks.find(l=>p.x>l.x&&p.x<l.x+l.w&&p.y>l.y&&p.y<l.y+l.h);ui.location.textContent=here?here.name:'ДИКАЯ МЕСТНОСТЬ';}
   function die(){state.running=false;ui.hud.classList.add('hidden');ui.gameover.classList.remove('hidden');ui.survivalTime.textContent='Продержались '+Math.floor(state.time/60)+':'+String(Math.floor(state.time%60)).padStart(2,'0');}
 
   function draw(){

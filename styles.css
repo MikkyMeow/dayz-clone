@@ -124,6 +124,9 @@ button {
 .hunger {
   background: #c0a652;
 }
+.stamina {
+  background: #69a7a0;
+}
 #location {
   position: absolute;
   top: max(18px, env(safe-area-inset-top));
