@@ -1,5 +1,5 @@
 import { C } from './config.js';
-import { attack } from './combat.js';
+import { attack, updateCombat } from './combat.js';
 import { updateEffects } from './effects.js';
 import { keys, pointer, refreshMouseAim, sticks } from './input.js';
 import { emitNoise, updateNoises } from './noise.js';
@@ -21,6 +21,27 @@ export function toggleCrouch() {
   updateUI();
 }
 
+export function dodge() {
+  const player = state?.player;
+  if (!state?.running || player.crouching || player.dodgeCooldown > 0 ||
+      player.stamina < C.player.dodgeStaminaCost) return;
+  let dx = player.moveX;
+  let dy = player.moveY;
+  if (Math.hypot(dx, dy) < .1) {
+    dx = Math.cos(player.angle);
+    dy = Math.sin(player.angle);
+  }
+  const length = Math.hypot(dx, dy) || 1;
+  player.dodgeX = dx / length;
+  player.dodgeY = dy / length;
+  player.dodgeTimer = C.player.dodgeDuration;
+  player.invulnerableTimer = C.player.dodgeInvulnerability;
+  player.dodgeCooldown = C.player.dodgeCooldown;
+  player.stamina -= C.player.dodgeStaminaCost;
+  player.pendingAttack = null;
+  player.attackTimer = 0;
+}
+
 export function useItem(type) {
   if (!state) return;
   const player = state.player;
@@ -40,6 +61,8 @@ export function useItem(type) {
 function updatePlayer(dt) {
   const player = state.player;
   player.cooldown = Math.max(0, player.cooldown - dt);
+  player.dodgeCooldown = Math.max(0, player.dodgeCooldown - dt);
+  player.invulnerableTimer = Math.max(0, player.invulnerableTimer - dt);
 
   let moveX = (keys.has('d') || keys.has('arrowright') ? 1 : 0) -
     (keys.has('a') || keys.has('arrowleft') ? 1 : 0);
@@ -48,6 +71,16 @@ function updatePlayer(dt) {
   if (sticks.move) {
     moveX = sticks.move.dx;
     moveY = sticks.move.dy;
+  }
+  const inputLength = Math.hypot(moveX, moveY) || 1;
+  player.moveX = moveX / inputLength;
+  player.moveY = moveY / inputLength;
+
+  if (player.dodgeTimer > 0) {
+    player.dodgeTimer = Math.max(0, player.dodgeTimer - dt);
+    moveCircle(player, player.dodgeX * C.player.dodgeSpeed * dt, player.dodgeY * C.player.dodgeSpeed * dt);
+    refreshMouseAim();
+    return;
   }
 
   const moving = Math.hypot(moveX, moveY) > 0;
@@ -126,6 +159,7 @@ function pickupLoot() {
 export function updateGame(dt) {
   state.time += dt;
   updatePlayer(dt);
+  updateCombat(dt);
   updateSurvival(dt);
 
   state.spawnTimer -= dt;

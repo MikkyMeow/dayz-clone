@@ -45,6 +45,8 @@ function createZombie(x, y, player) {
     wanderSpeed: random(C.zombie.wanderSpeedMin, C.zombie.wanderSpeedMax),
     wanderTimer: random(C.zombie.wanderTurnMin, C.zombie.wanderTurnMax),
     cooldown: 0,
+    attackTimer: 0,
+    staggerTimer: 0,
     angle: Math.atan2(player.y - y, player.x - x) + random(-Math.PI / 3, Math.PI / 3),
 
     behaviorState: ZombieState.WANDER,
@@ -254,13 +256,22 @@ function updateAttack(zombie, dt) {
   const playerDistance = distance(zombie, player);
   zombie.angle = Math.atan2(player.y - zombie.y, player.x - zombie.x);
   if (playerDistance > player.r + zombie.r + C.zombie.attackReach) {
+    zombie.attackTimer = 0;
     setState(zombie, ZombieState.CHASE, 'player left attack range');
     return;
   }
   if (zombie.cooldown > 0) return;
-  player.hp -= C.zombie.damage;
-  zombie.cooldown = C.zombie.attackCooldown;
-  burst(player.x, player.y, '#b84e43', 5);
+  if (zombie.attackTimer <= 0) {
+    zombie.attackTimer = C.zombie.attackWindup;
+    return;
+  }
+  zombie.attackTimer -= dt;
+  if (zombie.attackTimer > 0) return;
+  zombie.cooldown = C.zombie.attackCooldown + C.zombie.attackRecovery;
+  if (distance(zombie, player) <= player.r + zombie.r + C.zombie.attackReach + 4 && player.invulnerableTimer <= 0) {
+    player.hp -= C.zombie.damage;
+    burst(player.x, player.y, '#b84e43', 5);
+  }
 }
 
 function updateActiveMovement(zombie, dt) {
@@ -312,6 +323,11 @@ export function updateZombies(dt) {
 
   for (let i = state.zombies.length - 1; i >= 0; i--) {
     const zombie = state.zombies[i];
+    zombie.staggerTimer = Math.max(0, (zombie.staggerTimer || 0) - dt);
+    if (zombie.staggerTimer > 0) {
+      zombie.attackTimer = 0;
+      continue;
+    }
     const playerDistance = distance(zombie, player);
     if (playerDistance > despawnDistance && zombie.behaviorState === ZombieState.WANDER) {
       state.zombies.splice(i, 1);

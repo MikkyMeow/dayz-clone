@@ -161,6 +161,21 @@ button {
   border-color: #51594a;
   font-size: 11px;
 }
+#dodge {
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(137px, calc(env(safe-area-inset-bottom) + 123px));
+  padding: 11px 14px;
+  pointer-events: auto;
+  color: #f0e8c9;
+  background: #493f2fdb;
+  border-color: #9b8c61;
+  font-size: 11px;
+}
+#dodge span {
+  margin-left: 5px;
+  color: #b6aa85;
+}
 #crouch.active {
   color: white;
   border-color: #d8d8a5;

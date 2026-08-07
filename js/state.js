@@ -43,6 +43,9 @@ export function resetState() {
       hp: C.player.maxHealth, hunger: C.player.maxHunger, stamina: C.player.maxStamina,
       exhausted: false, crouching: false, angle: 0, weapon: 0,
       food: 0, medkits: 0, cooldown: 0,
+      attackTimer: 0, pendingAttack: null,
+      dodgeTimer: 0, dodgeCooldown: 0, invulnerableTimer: 0,
+      dodgeX: 0, dodgeY: 0, moveX: 0, moveY: 0,
       footstepDistance: 0
     },
     zombies: [], loot: [], particles: [], shots: [], noises: [], spawnTimer: 0

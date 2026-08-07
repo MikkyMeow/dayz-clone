@@ -5,7 +5,7 @@ import { landmarks } from './world.js';
 
 const ids = ['menu', 'gameover', 'hud', 'start', 'restart', 'hpText', 'hpBar',
   'hungerText', 'hungerBar', 'staminaText', 'staminaBar', 'weapon', 'message',
-  'crouch', 'foodCount', 'medkitCount', 'useFood', 'useMedkit', 'location', 'survivalTime'];
+  'crouch', 'dodge', 'foodCount', 'medkitCount', 'useFood', 'useMedkit', 'location', 'survivalTime'];
 
 export const ui = Object.fromEntries(ids.map(id => [id, document.querySelector(`#${id}`)]));
 let messageTimer = 0;

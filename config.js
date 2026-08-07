@@ -1,7 +1,15 @@
 // Все числа игрового баланса собраны здесь.
 window.GAME_CONFIG = Object.freeze({
   world: { width: 3200, height: 2400, grid: 80 },
-  player: { speed: 175, crouchSpeedMultiplier: .25, radius: 15, maxHealth: 100, maxHunger: 100, maxStamina: 30, staminaDrainPerSecond: 1, staminaRegenPerSecond: 1, hungerPerSecond: 0.32, starvationDamagePerSecond: 3, regenPerSecond: 1.5, regenMinHunger: 65 },
+  player: {
+    speed: 175, crouchSpeedMultiplier: .25, radius: 15,
+    maxHealth: 100, maxHunger: 100, maxStamina: 30,
+    staminaDrainPerSecond: 1, staminaRegenPerSecond: 1,
+    hungerPerSecond: 0.32, starvationDamagePerSecond: 3,
+    regenPerSecond: 1.5, regenMinHunger: 65,
+    dodgeSpeed: 430, dodgeDuration: .2, dodgeInvulnerability: .16,
+    dodgeStaminaCost: 7, dodgeCooldown: .42
+  },
   zombie: {
     radius: 15,
     speedMin: 42,
@@ -12,7 +20,9 @@ window.GAME_CONFIG = Object.freeze({
     wanderTurnMax: 4.5,
     health: 50,
     damage: 9,
-    attackCooldown: 1.1,
+    attackCooldown: .82,
+    attackWindup: .48,
+    attackRecovery: .28,
     attackReach: 2,
     spawnMinDistance: 390,
     spawnMaxDistance: 650,
@@ -51,8 +61,8 @@ window.GAME_CONFIG = Object.freeze({
   navigation: { cellSize: 40, maxSearchesPerFrame: 3 },
   debug: { zombieAI: false },
   weapons: [
-    { name: 'КУЛАКИ', damage: 12, range: 45, cooldown: .42, color: '#c4b29a' },
-    { name: 'НОЖ', damage: 28, range: 58, cooldown: .32, color: '#d2d6cf' },
+    { name: 'КУЛАКИ', damage: 13, range: 48, cooldown: .46, windup: .16, arc: .82, knockback: 12, stagger: .18, staminaCost: 2, color: '#c4b29a' },
+    { name: 'НОЖ', damage: 27, range: 61, cooldown: .39, windup: .12, arc: .62, knockback: 8, stagger: .13, staminaCost: 3, color: '#d2d6cf' },
     { name: 'ПИСТОЛЕТ', damage: 42, range: 620, cooldown: .3, color: '#ffe29c', gun: true }
   ],
   loot: { pickupDistance: 35, foodRestore: 32, medkitHeal: 48, foodCount: 16, medkitCount: 9 },

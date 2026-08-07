@@ -44,6 +44,10 @@ export function bindInput(actions) {
     if (key === 'f') actions.useItem('food');
     if (key === 'h') actions.useItem('medkit');
     if (key === 'c' && !event.repeat) actions.toggleCrouch();
+    if (key === ' ' && !event.repeat) {
+      event.preventDefault();
+      actions.dodge();
+    }
   });
   addEventListener('keyup', event => keys.delete(event.key.toLowerCase()));
 
@@ -68,6 +72,7 @@ export function bindInput(actions) {
       pointer.down = true;
     }
   });
+  canvas.addEventListener('contextmenu', event => event.preventDefault());
 
   canvas.addEventListener('pointerup', event => {
     pointer.down = false;

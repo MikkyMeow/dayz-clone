@@ -66,9 +66,27 @@ function drawEntities() {
     ctx.fillStyle = loot.type === 'food' ? '#765922' : '#b84d46';
     ctx.fillRect(loot.x - 3, loot.y - 3, 6, 6);
   });
-  state.zombies.forEach(zombie => drawPerson(zombie, '#71815b', zombie.angle));
+  state.zombies.forEach(zombie => {
+    if (zombie.attackTimer > 0) {
+      ctx.strokeStyle = `rgba(225,75,60,${.35 + .55 * (1 - zombie.attackTimer / C.zombie.attackWindup)})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(zombie.x, zombie.y, zombie.r + 8, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    drawPerson(zombie, zombie.staggerTimer > 0 ? '#a1a985' : '#71815b', zombie.angle);
+  });
   const player = state.player;
   drawPerson(player, C.weapons[player.weapon].color, player.angle, player.crouching);
+  if (player.pendingAttack) {
+    ctx.strokeStyle = '#e8dec0aa';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.pendingAttack.range,
+      player.pendingAttack.angle - player.pendingAttack.arc,
+      player.pendingAttack.angle + player.pendingAttack.arc);
+    ctx.stroke();
+  }
 
   state.shots.forEach(shot => {
     ctx.strokeStyle = '#ffeab0';
