@@ -5,6 +5,12 @@ import { state } from './state.js';
 import { clamp } from './utils.js';
 import { buildings, landmarks, ponds } from './world.js';
 
+const MOBILE_CONTENT_SCALE = .5;
+
+function contentScale() {
+  return matchMedia('(max-width: 650px)').matches ? MOBILE_CONTENT_SCALE : 1;
+}
+
 function drawPerson(person, color, angle, crouching = false) {
   ctx.save();
   ctx.translate(person.x, person.y);
@@ -205,11 +211,15 @@ function drawSticks() {
 
 export function drawGame() {
   const player = state.player;
-  const cameraX = clamp(player.x - viewport.width / 2, 0, Math.max(0, C.world.width - viewport.width));
-  const cameraY = clamp(player.y - viewport.height / 2, 0, Math.max(0, C.world.height - viewport.height));
+  const scale = contentScale();
+  const visibleWidth = viewport.width / scale;
+  const visibleHeight = viewport.height / scale;
+  const cameraX = clamp(player.x - visibleWidth / 2, 0, Math.max(0, C.world.width - visibleWidth));
+  const cameraY = clamp(player.y - visibleHeight / 2, 0, Math.max(0, C.world.height - visibleHeight));
   ctx.fillStyle = '#313b2b';
   ctx.fillRect(0, 0, viewport.width, viewport.height);
   ctx.save();
+  ctx.scale(scale, scale);
   ctx.translate(-cameraX, -cameraY);
   drawWorld();
   drawEntities();

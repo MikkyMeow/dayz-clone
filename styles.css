@@ -107,6 +107,9 @@ button {
   justify-content: space-between;
   margin-bottom: 4px;
 }
+.status-icon {
+  display: none;
+}
 .bar {
   height: 6px;
   margin-bottom: 10px;
@@ -167,7 +170,7 @@ button {
   position: absolute;
   right: max(18px, env(safe-area-inset-right));
   bottom: max(95px, calc(env(safe-area-inset-bottom) + 81px));
-  padding: 9px 12px;
+  padding: 9px;
   pointer-events: auto;
   color: #c9cfbe;
   background: #171a16db;
@@ -178,25 +181,41 @@ button {
   position: absolute;
   right: max(18px, env(safe-area-inset-right));
   bottom: max(137px, calc(env(safe-area-inset-bottom) + 123px));
-  padding: 11px 14px;
+  padding: 9px;
   pointer-events: auto;
   color: #f0e8c9;
   background: #493f2fdb;
   border-color: #9b8c61;
   font-size: 11px;
 }
-#dodge span {
-  margin-left: 5px;
-  color: #b6aa85;
+.action-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+}
+.action-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+#crouch .stand-icon {
+  display: none;
+}
+#crouch.active .crouch-icon {
+  display: none;
+}
+#crouch.active .stand-icon {
+  display: block;
 }
 #crouch.active {
   color: white;
   border-color: #d8d8a5;
   background: #59634d;
-}
-#crouch span {
-  margin-left: 5px;
-  color: #929b87;
 }
 #inventory {
   position: absolute;
@@ -224,6 +243,27 @@ button {
   background: #59634d;
 }
 @media (max-width: 650px) {
+  #gameover,
+  #hud {
+    inset: 0 auto auto 0;
+    width: 200%;
+    height: 200%;
+    transform: scale(.5);
+    transform-origin: top left;
+  }
+  #location {
+    top: 88px;
+  }
+}
+
+@media (pointer: coarse) {
+  #menu {
+    inset: 0 auto auto 0;
+    width: 200%;
+    height: 200%;
+    transform: scale(.5);
+    transform-origin: top left;
+  }
   #inventory {
     bottom: max(8px, env(safe-area-inset-bottom));
   }
@@ -231,7 +271,35 @@ button {
     min-width: 52px;
     padding: 6px 4px;
   }
-  #location {
-    top: 88px;
+  .status-panel {
+    display: flex;
+    width: auto;
+    gap: 16px;
+    align-items: center;
+    padding: 10px 12px;
   }
+  .status-panel .bar {
+    display: none;
+  }
+  .status-row {
+    gap: 5px;
+    align-items: center;
+    margin: 0;
+  }
+  .status-label > span {
+    display: none;
+  }
+  .status-icon {
+    display: block;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .status-row:nth-of-type(1) .status-icon { color: #df7468; }
+  .status-row:nth-of-type(3) .status-icon { color: #d6bc62; }
+  .status-row:nth-of-type(5) .status-icon { color: #72b8b0; }
 }

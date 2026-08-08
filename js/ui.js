@@ -34,7 +34,9 @@ export function updateUI() {
   ui.hungerBar.style.width = `${player.hunger}%`;
   ui.staminaBar.style.width = `${player.stamina / C.player.maxStamina * 100}%`;
   ui.crouch.classList.toggle('active', player.crouching);
-  ui.crouch.firstChild.textContent = player.crouching ? 'ВСТАТЬ ' : 'ПРИСЕСТЬ ';
+  const crouchAction = player.crouching ? 'Встать' : 'Присесть';
+  ui.crouch.setAttribute('aria-label', crouchAction);
+  ui.crouch.title = `${crouchAction} (C)`;
   ui.foodCount.textContent = player.food;
   ui.medkitCount.textContent = player.medkits;
   ui.interact.classList.toggle('hidden', !state.nearbyDoor);

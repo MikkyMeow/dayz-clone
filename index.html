@@ -1,59 +1,112 @@
 <!doctype html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-  <meta name="theme-color" content="#151813">
-  <title>Мёртвая зона</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <canvas id="game" aria-label="Игровое поле"></canvas>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#151813" />
+    <title>DeadZone</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Игровое поле"></canvas>
 
-  <section id="menu" class="overlay">
-    <div class="card">
-      <p class="eyebrow">МОБИЛЬНАЯ ВЫЖИВАЛКА</p>
-      <h1>Мёртвая зона</h1>
-      <p>Ищи припасы, следи за голодом и не шуми без нужды.</p>
-      <button id="start">Начать выживание</button>
-      <small>WASD / стрелки — движение · Shift — бег · C — присесть · E — действие<br>Мышь — прицел · ЛКМ — атака · Пробел — рывок. Красный круг — зомби готовится ударить.</small>
-    </div>
-  </section>
+    <section id="menu" class="overlay">
+      <div class="card">
+        <p class="eyebrow">МОБИЛЬНАЯ ВЫЖИВАЛКА</p>
+        <h1>DeadZone</h1>
+        <p>Ищи припасы, следи за голодом и не шуми без нужды.</p>
+        <button id="start">Начать выживание</button>
+        <small
+          >WASD / стрелки — движение · Shift — бег · C — присесть · E —
+          действие<br />Мышь — прицел · ЛКМ — атака · Пробел — рывок. Красный
+          круг — зомби готовится ударить.</small
+        >
+      </div>
+    </section>
 
-  <section id="gameover" class="overlay hidden">
-    <div class="card">
-      <p class="eyebrow danger">ВЫ ПОГИБЛИ</p>
-      <h2 id="survivalTime">Продержались 0:00</h2>
-      <button id="restart">Попробовать снова</button>
-    </div>
-  </section>
+    <section id="gameover" class="overlay hidden">
+      <div class="card">
+        <p class="eyebrow danger">ВЫ ПОГИБЛИ</p>
+        <h2 id="survivalTime">Продержались 0:00</h2>
+        <button id="restart">Попробовать снова</button>
+      </div>
+    </section>
 
-  <div id="hud" class="hidden">
-    <div class="status-panel">
-      <div class="status-row"><span>ЗДОРОВЬЕ</span><b id="hpText">100</b></div>
-      <div class="bar"><i id="hpBar" class="hp"></i></div>
-      <div class="status-row"><span>СЫТОСТЬ</span><b id="hungerText">100</b></div>
-      <div class="bar"><i id="hungerBar" class="hunger"></i></div>
-      <div class="status-row"><span>СТАМИНА</span><b id="staminaText">30</b></div>
-      <div class="bar"><i id="staminaBar" class="stamina"></i></div>
+    <div id="hud" class="hidden">
+      <div class="status-panel">
+        <div class="status-row" aria-label="Здоровье">
+          <span class="status-label"
+            ><svg class="status-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"
+              /></svg
+            ><span>ЗДОРОВЬЕ</span></span
+          ><b id="hpText">100</b>
+        </div>
+        <div class="bar"><i id="hpBar" class="hp"></i></div>
+        <div class="status-row" aria-label="Сытость">
+          <span class="status-label"
+            ><svg class="status-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M15.5 8.5c1.8-1.8 4.5-2 6-.5s1.3 4.2-.5 6l-2 2-2-2-3 3 2 2-2 2c-1.8 1.8-4.5 2-6 .5s-1.3-4.2.5-6l8-8Z"
+              />
+              <path d="m7.5 15.5-2-2m1-3-3-3m7-1-3-3" /></svg
+            ><span>СЫТОСТЬ</span></span
+          ><b id="hungerText">100</b>
+        </div>
+        <div class="bar"><i id="hungerBar" class="hunger"></i></div>
+        <div class="status-row" aria-label="Стамина">
+          <span class="status-label"
+            ><svg class="status-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m13 2-9 12h8l-1 8 9-12h-8l1-8Z" /></svg
+            ><span>СТАМИНА</span></span
+          ><b id="staminaText">30</b>
+        </div>
+        <div class="bar"><i id="staminaBar" class="stamina"></i></div>
+      </div>
+      <div id="location">ДИКАЯ МЕСТНОСТЬ</div>
+      <div id="weapon">КУЛАКИ</div>
+      <div id="message"></div>
+      <button id="interact" class="hidden">E: открыть дверь</button>
+      <button
+        id="crouch"
+        class="action-icon"
+        aria-label="Присесть"
+        title="Присесть (C)"
+      >
+        <svg class="crouch-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="9" cy="5" r="2.5" />
+          <path d="m8 8 3.5 4H17l3 4M11.5 12l-4 3.5L4 19M7.5 15.5 12 19h5" />
+        </svg>
+        <svg class="stand-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="4" r="2.5" />
+          <path d="M12 7v8m0-6-4 4m4-4 4 4m-4 2-3 6m3-6 3 6" />
+        </svg>
+      </button>
+      <button
+        id="dodge"
+        class="action-icon"
+        aria-label="Рывок"
+        title="Рывок (Пробел)"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 7h7M2 12h6m-4 5h6M14 5l7 7-7 7m7-7H9" />
+        </svg>
+      </button>
+      <div id="inventory">
+        <button data-slot="0">1<br /><span>Кулаки</span></button>
+        <button data-slot="1">2<br /><span>Нож</span></button>
+        <button data-slot="2">3<br /><span>Пистолет</span></button>
+        <button id="useFood">Еда <b id="foodCount">0</b></button>
+        <button id="useMedkit">Аптечка <b id="medkitCount">0</b></button>
+      </div>
     </div>
-    <div id="location">ДИКАЯ МЕСТНОСТЬ</div>
-    <div id="weapon">КУЛАКИ</div>
-    <div id="message"></div>
-    <button id="interact" class="hidden">E: открыть дверь</button>
-    <button id="crouch">ПРИСЕСТЬ <span>C</span></button>
-    <button id="dodge">РЫВОК <span>SPACE</span></button>
-    <div id="inventory">
-      <button data-slot="0">1<br><span>Кулаки</span></button>
-      <button data-slot="1">2<br><span>Нож</span></button>
-      <button data-slot="2">3<br><span>Пистолет</span></button>
-      <button id="useFood">Еда <b id="foodCount">0</b></button>
-      <button id="useMedkit">Аптечка <b id="medkitCount">0</b></button>
-    </div>
-  </div>
 
-  <script src="config.js"></script>
-  <script type="module" src="js/main.js"></script>
-</body>
+    <script src="config.js"></script>
+    <script type="module" src="js/main.js"></script>
+  </body>
 </html>
