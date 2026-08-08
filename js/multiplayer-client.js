@@ -3,6 +3,7 @@ import { keys, pointer, sticks } from './input.js';
 import { state } from './state.js';
 import { showMessage, updateUI } from './ui.js';
 import { applyDoorStates, findNearbyDoor } from './world.js';
+import { recordSnapshot } from './performance.js';
 
 const PROTOCOL_VERSION = 1;
 
@@ -14,6 +15,7 @@ export class MultiplayerClient {
     this.inputTimer = null;
     this.pingTimer = null;
     this.lastAttackAt = 0;
+    this.receivedSnapshot = false;
     this.onReady = onReady;
     this.onDisconnect = onDisconnect;
   }
@@ -25,6 +27,7 @@ export class MultiplayerClient {
       const timeout = setTimeout(() => { socket.close(); reject(new Error('Сервер не отвечает')); }, 7000);
       socket.addEventListener('open', () => socket.send(JSON.stringify({ type: 'join', protocolVersion: PROTOCOL_VERSION, name })));
       socket.addEventListener('message', event => {
+        recordSnapshot(typeof event.data === 'string' ? event.data.length : event.data?.byteLength || 0);
         let message;
         try { message = JSON.parse(event.data); } catch { return; }
         if (message.type === 'welcome') {
@@ -50,7 +53,7 @@ export class MultiplayerClient {
   stopTimers() { clearInterval(this.inputTimer); clearInterval(this.pingTimer); }
 
   close() {
-    this.stopTimers(); this.playerId = null;
+    this.stopTimers(); this.playerId = null; this.receivedSnapshot = false;
     if (this.socket?.readyState <= WebSocket.OPEN) this.socket.close(1000, 'mode_change');
   }
 
@@ -77,13 +80,49 @@ export class MultiplayerClient {
 
   action(action, payload = {}) { this.send({ type: 'action', seq: ++this.seq, action, payload }); }
 
+  update(dt) {
+    const blend = 1 - Math.exp(-C.network.interpolationRate * dt);
+    if (state.renderPlayer) {
+      state.renderPlayer.x += (state.player.x - state.renderPlayer.x) * blend;
+      state.renderPlayer.y += (state.player.y - state.renderPlayer.y) * blend;
+      state.renderPlayer.angle += Math.atan2(
+        Math.sin(state.player.angle - state.renderPlayer.angle),
+        Math.cos(state.player.angle - state.renderPlayer.angle)
+      ) * blend;
+    }
+    for (const collection of [state.remotePlayers, state.zombies]) {
+      for (const entity of collection) {
+        if (entity.targetX === undefined) continue;
+        entity.x += (entity.targetX - entity.x) * blend;
+        entity.y += (entity.targetY - entity.y) * blend;
+        entity.angle += Math.atan2(Math.sin(entity.targetAngle - entity.angle), Math.cos(entity.targetAngle - entity.angle)) * blend;
+      }
+    }
+  }
+
+  reconcileEntities(current, incoming) {
+    const existing = new Map(current.map(entity => [entity.id, entity]));
+    return incoming.map(next => {
+      const entity = existing.get(next.id);
+      if (!entity) return { ...next, targetX: next.x, targetY: next.y, targetAngle: next.angle };
+      const { x, y, angle } = entity;
+      Object.assign(entity, next, { x, y, angle, targetX: next.x, targetY: next.y, targetAngle: next.angle });
+      return entity;
+    });
+  }
+
   applySnapshot(snapshot) {
     const self = snapshot.players.find(player => player.id === this.playerId);
     if (!self || !state) return;
     const visual = { particles: state.particles, shots: state.shots, noises: state.noises };
     Object.assign(state.player, self);
-    state.remotePlayers = snapshot.players.filter(player => player.id !== this.playerId);
-    state.zombies = snapshot.zombies;
+    if (!this.receivedSnapshot) {
+      Object.assign(state.renderPlayer, { x: self.x, y: self.y, angle: self.angle, r: self.r });
+      this.receivedSnapshot = true;
+    }
+    state.remotePlayers = this.reconcileEntities(state.remotePlayers,
+      snapshot.players.filter(player => player.id !== this.playerId));
+    state.zombies = this.reconcileEntities(state.zombies, snapshot.zombies);
     state.loot = snapshot.loot;
     state.time = snapshot.time;
     state.particles = visual.particles; state.shots = visual.shots; state.noises = visual.noises;

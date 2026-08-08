@@ -1,5 +1,6 @@
 import { C } from './config.js';
 import { clamp, random } from './utils.js';
+import { SpatialGrid } from './spatial-grid.js';
 
 export const landmarks = [
   { name: 'ФЕРМА', x: 330, y: 380, w: 460, h: 330, color: '#665d3e', buildings: [[390, 430, 150, 100], [610, 520, 120, 150]], loot: 'food' },
@@ -82,6 +83,8 @@ function wallSegments(building, side) {
 const walls = buildings.flatMap(building =>
   ['top', 'right', 'bottom', 'left'].flatMap(side => wallSegments(building, side))
 );
+const obstacleGrid = new SpatialGrid(320);
+const nearbyObstacles = [];
 
 function doorObstacle(door) {
   const building = door.building;
@@ -112,6 +115,8 @@ export function resetDoors() {
       obstacles.push(door.obstacle);
     }
   }
+  obstacleGrid.clear();
+  for (const obstacle of obstacles) obstacleGrid.insert(obstacle);
 }
 
 export function doorPosition(door) {
@@ -157,8 +162,10 @@ export function toggleDoor(door) {
   if (door.open) {
     const index = obstacles.indexOf(door.obstacle);
     if (index !== -1) obstacles.splice(index, 1);
+    obstacleGrid.remove(door.obstacle);
   } else if (!obstacles.includes(door.obstacle)) {
     obstacles.push(door.obstacle);
+    obstacleGrid.insert(door.obstacle);
   }
   return door.open;
 }
@@ -180,7 +187,9 @@ export function applyDoorStates(states) {
 resetDoors();
 
 export function collidesWithObstacle(object) {
-  return obstacles.some(obstacle =>
+  const candidates = obstacleGrid.query({ left: object.x - object.r, top: object.y - object.r,
+    right: object.x + object.r, bottom: object.y + object.r }, nearbyObstacles);
+  return candidates.some(obstacle =>
     object.x + object.r > obstacle.x &&
     object.x - object.r < obstacle.x + obstacle.w &&
     object.y + object.r > obstacle.y &&
@@ -224,7 +233,9 @@ function segmentIntersectsRect(from, to, rect) {
 // поэтому здесь возвращается отдельный коэффициент урона для стрельбы.
 export function attackPath(from, to) {
   let throughDoor = false;
-  for (const obstacle of obstacles) {
+  const candidates = obstacleGrid.query({ left: Math.min(from.x, to.x), top: Math.min(from.y, to.y),
+    right: Math.max(from.x, to.x), bottom: Math.max(from.y, to.y) }, nearbyObstacles);
+  for (const obstacle of candidates) {
     if (!segmentIntersectsRect(from, to, obstacle)) continue;
     if (!obstacle.door) return { blocked: true, damageMultiplier: 0 };
     throughDoor = true;
@@ -237,7 +248,10 @@ export function attackPath(from, to) {
 // хотя для зрения clearance обычно равен нулю.
 export function hasClearPath(from, to, clearance = 0) {
   if (!isWalkable(from, clearance) || !isWalkable(to, clearance)) return false;
-  return !obstacles.some(obstacle => segmentIntersectsRect(from, to, {
+  const candidates = obstacleGrid.query({ left: Math.min(from.x, to.x) - clearance,
+    top: Math.min(from.y, to.y) - clearance, right: Math.max(from.x, to.x) + clearance,
+    bottom: Math.max(from.y, to.y) + clearance }, nearbyObstacles);
+  return !candidates.some(obstacle => segmentIntersectsRect(from, to, {
     x: obstacle.x - clearance,
     y: obstacle.y - clearance,
     w: obstacle.w + clearance * 2,

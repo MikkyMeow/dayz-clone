@@ -1,4 +1,5 @@
 import { updateEffects } from './effects.js';
+import { C } from './config.js';
 import { bindInput } from './input.js';
 import {
   assignQuickSlot, dodge, dropHeldItem, equipItem, interact, selectQuickSlot,
@@ -6,12 +7,15 @@ import {
 } from './gameplay.js';
 import { MultiplayerClient } from './multiplayer-client.js';
 import { drawGame } from './renderer.js';
+import { beginMeasure, endMeasure, recordFrame } from './performance.js';
 import { resetState, state } from './state.js';
 import { closeBackpack, showGame, showMessage, toggleBackpack, ui, updateUI } from './ui.js';
 
 let lastFrame = 0;
 let animationFrame = 0;
 let mode = 'single';
+let accumulator = 0;
+let previousPlayerPose = { x: 0, y: 0, angle: 0 };
 const multiplayerStart = document.querySelector('#multiplayerStart');
 const playerName = document.querySelector('#playerName');
 const connectionStatus = document.querySelector('#connectionStatus');
@@ -29,19 +33,50 @@ const multiplayer = new MultiplayerClient({
 
 function loop(now) {
   if (!state?.running) return;
-  const dt = Math.min((now - lastFrame) / 1000, .05);
+  const frameMs = Math.min(now - lastFrame, 100);
+  const dt = frameMs / 1000;
   lastFrame = now;
-  if (mode === 'single') updateGame(dt);
-  else updateEffects(dt);
-  drawGame();
+  beginMeasure('update');
+  if (mode === 'single') {
+    accumulator = Math.min(accumulator + dt, C.render.fixedStep * C.render.maxCatchUpSteps);
+    let steps = 0;
+    while (accumulator >= C.render.fixedStep && steps++ < C.render.maxCatchUpSteps) {
+      previousPlayerPose.x = state.player.x;
+      previousPlayerPose.y = state.player.y;
+      previousPlayerPose.angle = state.player.angle;
+      updateGame(C.render.fixedStep);
+      accumulator -= C.render.fixedStep;
+    }
+    const alpha = accumulator / C.render.fixedStep;
+    state.renderPlayer.x = previousPlayerPose.x + (state.player.x - previousPlayerPose.x) * alpha;
+    state.renderPlayer.y = previousPlayerPose.y + (state.player.y - previousPlayerPose.y) * alpha;
+    state.renderPlayer.angle = previousPlayerPose.angle + Math.atan2(
+      Math.sin(state.player.angle - previousPlayerPose.angle),
+      Math.cos(state.player.angle - previousPlayerPose.angle)
+    ) * alpha;
+  } else { updateEffects(dt); multiplayer.update(dt); }
+  endMeasure('update');
+  beginMeasure('render');
+  const counts = drawGame();
+  endMeasure('render');
+  recordFrame(frameMs, { ...counts, particles: state.particles.length });
   animationFrame = requestAnimationFrame(loop);
 }
 
 function beginLoop() {
   lastFrame = performance.now();
+  accumulator = 0;
+  if (state?.player) {
+    previousPlayerPose = { x: state.player.x, y: state.player.y, angle: state.player.angle };
+    Object.assign(state.renderPlayer, previousPlayerPose);
+  }
   cancelAnimationFrame(animationFrame);
   animationFrame = requestAnimationFrame(loop);
 }
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && state?.running) beginLoop();
+});
 
 function startGame() {
   multiplayer.close(); mode = 'single'; resetState();

@@ -53,3 +53,16 @@ test('server resolves PvP damage, death and respawn', () => {
   assert.equal(b.alive, true);
   assert.equal(b.hp, 100);
 });
+
+test('snapshots include only entities inside the player area of interest', () => {
+  const session = new GameSession();
+  const observer = session.addPlayer('observer', 'Observer');
+  const near = session.addPlayer('near', 'Near');
+  const far = session.addPlayer('far', 'Far');
+  Object.assign(observer, { x: 100, y: 100 });
+  Object.assign(near, { x: 200, y: 100 });
+  Object.assign(far, { x: 3000, y: 2200 });
+  const snapshot = session.snapshot(observer.id);
+  assert.deepEqual(snapshot.players.map(player => player.id).sort(), ['near', 'observer']);
+  assert.ok(snapshot.loot.every(item => Math.hypot(item.x - observer.x, item.y - observer.y) <= 1250));
+});

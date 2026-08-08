@@ -53,6 +53,9 @@ export function resetState() {
     zombies: [], loot: [], remotePlayers: [], particles: [], shots: [], noises: [], spawnTimer: 0,
     nearbyDoor: null
   };
+  state.renderPlayer = {
+    x: state.player.x, y: state.player.y, angle: state.player.angle, r: state.player.r
+  };
   seedLoot();
   return state;
 }

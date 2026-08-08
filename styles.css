@@ -25,6 +25,22 @@ canvas {
   height: 100%;
   image-rendering: pixelated;
 }
+#perfHud {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 100;
+  margin: 0;
+  padding: 8px;
+  pointer-events: none;
+  color: #cfe9b5;
+  background: #071008dd;
+  border: 1px solid #57704c;
+  font: 11px/1.4 monospace;
+}
+@media (pointer: coarse) {
+  .overlay { backdrop-filter: none; }
+}
 .hidden {
   display: none !important;
 }

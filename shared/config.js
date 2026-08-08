@@ -24,6 +24,12 @@ export const C = Object.freeze({
     waypointReachDistance: 12, stuckTimeout: 1.1, stuckMovementThreshold: 2
   },
   navigation: { cellSize: 40, maxSearchesPerFrame: 3 },
+  render: {
+    quality: 'auto', lowPixelRatio: .75, mediumPixelRatio: 1, highPixelRatio: 1.5,
+    chunkSize: 640, maxCachedChunks: 48, cullMargin: 96,
+    maxParticles: 240, fixedStep: 1 / 60, maxCatchUpSteps: 3
+  },
+  network: { aoiRadius: 1250, interpolationRate: 14 },
   interaction: { doorDistance: 62 },
   debug: { zombieAI: false },
   weapons: [

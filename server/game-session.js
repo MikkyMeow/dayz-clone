@@ -273,11 +273,15 @@ export class GameSession {
   }
 
   snapshot(forPlayerId) {
+    const observer = this.players.get(forPlayerId);
+    const radiusSquared = C.network.aoiRadius * C.network.aoiRadius;
+    const relevant = entity => !observer || entity.id === forPlayerId ||
+      (entity.x - observer.x) ** 2 + (entity.y - observer.y) ** 2 <= radiusSquared;
     return {
       type: 'snapshot', sessionId: this.id, tick: this.tick, time: this.time,
       selfId: forPlayerId,
-      players: [...this.players.values()].map(player => ({ ...player, input: undefined })),
-      zombies: [...this.zombies.values()], loot: [...this.loot.values()],
+      players: [...this.players.values()].filter(relevant).map(player => ({ ...player, input: undefined })),
+      zombies: [...this.zombies.values()].filter(relevant), loot: [...this.loot.values()].filter(relevant),
       doors: getDoorStates(), events: this.events
     };
   }
