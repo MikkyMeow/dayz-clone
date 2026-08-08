@@ -11,17 +11,29 @@ const countKey = { knife: 'knife', pistol: 'pistol', food: 'food', medkit: 'medk
 const RESPAWN_SECONDS = 3;
 const SPAWN_PROTECTION_SECONDS = 2;
 
-function newPlayer(id, name) {
+function newPlayer(id, name, characterId, saved = null) {
   const spawn = randomSpawnPoint(C.player.radius);
-  return {
-    id, name, x: spawn.x, y: spawn.y, r: C.player.radius, angle: 0,
+  const player = {
+    id, name, characterId, x: spawn.x, y: spawn.y, r: C.player.radius, angle: 0,
     hp: C.player.maxHealth, hunger: C.player.maxHunger, stamina: C.player.maxStamina,
     exhausted: false, crouching: false, weapon: 1, heldItem: 'knife',
     quickSlots: ['knife', 'pistol', null, null], knife: 1, pistol: 1, food: 0, medkits: 0,
     cooldown: 0, dodgeTimer: 0, dodgeCooldown: 0, invulnerableTimer: SPAWN_PROTECTION_SECONDS,
     dodgeX: 0, dodgeY: 0, alive: true, respawnAt: 0, kills: 0, deaths: 0,
-    lastProcessedInput: 0, input: { moveX: 0, moveY: 0, angle: 0, run: false, crouch: false }
+    lastProcessedInput: 0, input: { moveX: 0, moveY: 0, angle: 0, run: false, crouch: false },
+    logoutAt: 0, connected: true
   };
+  if (saved) {
+    const fields = ['x', 'y', 'angle', 'hp', 'hunger', 'stamina', 'exhausted', 'crouching',
+      'weapon', 'heldItem', 'quickSlots', 'knife', 'pistol', 'food', 'medkits', 'alive',
+      'respawnAt', 'kills', 'deaths'];
+    for (const field of fields) if (saved[field] !== undefined) player[field] = saved[field];
+    if (!player.alive) player.respawnAt = RESPAWN_SECONDS;
+    player.x = clamp(Number(player.x) || spawn.x, player.r, C.world.width - player.r);
+    player.y = clamp(Number(player.y) || spawn.y, player.r, C.world.height - player.r);
+    if (!isWalkable(player, player.r)) Object.assign(player, spawn);
+  }
+  return player;
 }
 
 export class GameSession {
@@ -36,6 +48,7 @@ export class GameSession {
     this.events = [];
     this.spawnTimer = 0;
     this.nextEntityId = 1;
+    this.completedLogouts = [];
     this.seedLoot();
   }
 
@@ -51,10 +64,26 @@ export class GameSession {
     }
   }
 
-  addPlayer(id, name) {
-    const player = newPlayer(id, name);
+  addPlayer(id, name, characterId = id, saved = null) {
+    const player = newPlayer(id, name, characterId, saved);
     this.players.set(id, player);
     this.events.push({ type: 'playerJoined', playerId: id, name, tick: this.tick });
+    return player;
+  }
+
+  reconnectPlayer(oldId, newId, name) {
+    const player = this.players.get(oldId);
+    if (!player) return null;
+    this.players.delete(oldId);
+    player.id = newId;
+    player.name = name;
+    player.connected = true;
+    player.logoutAt = 0;
+    player.lastProcessedInput = 0;
+    player.input = { moveX: 0, moveY: 0, angle: player.angle, run: false,
+      crouch: player.crouching };
+    this.players.set(newId, player);
+    this.events.push({ type: 'playerReconnected', playerId: newId, name, tick: this.tick });
     return player;
   }
 
@@ -63,9 +92,48 @@ export class GameSession {
     this.events.push({ type: 'playerLeft', playerId: id, tick: this.tick });
   }
 
+  beginLogout(id, connected = true) {
+    const player = this.players.get(id);
+    if (!player || player.logoutAt) return false;
+    player.connected = connected;
+    player.logoutAt = this.time + C.network.logoutSeconds;
+    player.input = { seq: player.lastProcessedInput, moveX: 0, moveY: 0,
+      angle: player.angle, run: false, crouch: player.crouching };
+    return true;
+  }
+
+  cancelLogout(id) {
+    const player = this.players.get(id);
+    if (!player || !player.connected || !player.logoutAt) return false;
+    player.logoutAt = 0;
+    return true;
+  }
+
+  disconnectPlayer(id) {
+    const player = this.players.get(id);
+    if (!player) return;
+    player.connected = false;
+    if (!player.logoutAt) this.beginLogout(id, false);
+  }
+
+  takeCompletedLogouts() {
+    const completed = this.completedLogouts;
+    this.completedLogouts = [];
+    return completed;
+  }
+
+  serializePlayer(player) {
+    const fields = ['name', 'x', 'y', 'angle', 'hp', 'hunger', 'stamina', 'exhausted',
+      'crouching', 'weapon', 'heldItem', 'quickSlots', 'knife', 'pistol', 'food', 'medkits',
+      'alive', 'respawnAt', 'kills', 'deaths'];
+    const saved = Object.fromEntries(fields.map(field => [field, player[field]]));
+    if (!saved.alive) saved.respawnAt = RESPAWN_SECONDS;
+    return saved;
+  }
+
   setInput(id, input) {
     const player = this.players.get(id);
-    if (!player || input.seq <= player.lastProcessedInput) return;
+    if (!player || player.logoutAt || input.seq <= player.lastProcessedInput) return;
     player.input = input;
     player.lastProcessedInput = input.seq;
   }
@@ -73,6 +141,9 @@ export class GameSession {
   action(id, message) {
     const player = this.players.get(id);
     if (!player) return;
+    if (message.action === 'beginLogout') return this.beginLogout(id);
+    if (message.action === 'cancelLogout') return this.cancelLogout(id);
+    if (player.logoutAt) return;
     if (message.action === 'respawn') return this.respawn(player);
     if (!player.alive) return;
     const payload = message.payload || {};
@@ -270,6 +341,12 @@ export class GameSession {
     this.spawnTimer -= dt;
     if (this.spawnTimer <= 0) { this.spawnTimer = C.zombie.spawnEvery; this.spawnZombie(); }
     this.updateZombies(dt);
+    for (const player of [...this.players.values()]) {
+      if (!player.logoutAt || this.time < player.logoutAt) continue;
+      this.completedLogouts.push({ id: player.id, characterId: player.characterId,
+        state: this.serializePlayer(player), connected: player.connected });
+      this.removePlayer(player.id);
+    }
   }
 
   snapshot(forPlayerId) {
@@ -280,7 +357,8 @@ export class GameSession {
     return {
       type: 'snapshot', sessionId: this.id, tick: this.tick, time: this.time,
       selfId: forPlayerId,
-      players: [...this.players.values()].filter(relevant).map(player => ({ ...player, input: undefined })),
+      players: [...this.players.values()].filter(relevant).map(player => ({ ...player, input: undefined,
+        characterId: undefined, connected: undefined })),
       zombies: [...this.zombies.values()].filter(relevant), loot: [...this.loot.values()].filter(relevant),
       doors: getDoorStates(), events: this.events
     };

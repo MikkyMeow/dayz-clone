@@ -64,7 +64,7 @@ window.GAME_CONFIG = Object.freeze({
     chunkSize: 640, maxCachedChunks: 48, cullMargin: 96,
     maxParticles: 240, fixedStep: 1 / 60, maxCatchUpSteps: 3
   },
-  network: { aoiRadius: 1250, interpolationRate: 14 },
+  network: { aoiRadius: 1250, interpolationRate: 14, logoutSeconds: 15 },
   interaction: { doorDistance: 62 },
   debug: { zombieAI: false },
   weapons: [

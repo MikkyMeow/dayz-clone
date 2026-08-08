@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { GameSession } from './game-session.js';
+import { PlayerStore } from './player-store.js';
 import { parseClientMessage, PROTOCOL_VERSION } from './protocol.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -14,6 +15,8 @@ const tickMs = 1000 / 30;
 const snapshotEveryTicks = 2;
 const session = new GameSession();
 const clients = new Map();
+const playerStore = new PlayerStore(join(root, 'data', 'players.json'));
+await playerStore.load();
 
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
@@ -56,7 +59,18 @@ wss.on('connection', socket => {
       if (message.type === 'ping') { socket.send(JSON.stringify({ type: 'pong', sentAt: message.sentAt, serverTime: Date.now() })); return; }
       if (message.type === 'join') {
         if (client.joined) return;
-        client.joined = true; session.addPlayer(client.id, message.name);
+        const existingPlayer = [...session.players.values()].find(player =>
+          player.characterId === message.characterId);
+        const previousConnection = [...clients.entries()].find(([, other]) =>
+          other.id === existingPlayer?.id);
+        if (previousConnection) {
+          previousConnection[1].joined = false;
+          previousConnection[0].close(4001, 'character_reconnected');
+        }
+        client.joined = true;
+        client.characterId = message.characterId;
+        if (existingPlayer) session.reconnectPlayer(existingPlayer.id, client.id, message.name);
+        else session.addPlayer(client.id, message.name, message.characterId, playerStore.get(message.characterId));
         socket.send(JSON.stringify({ type: 'welcome', protocolVersion: PROTOCOL_VERSION, playerId: client.id }));
         return;
       }
@@ -67,18 +81,32 @@ wss.on('connection', socket => {
       socket.send(JSON.stringify({ type: 'error', code: error.message }));
     }
   });
-  socket.on('close', () => { clients.delete(socket); if (client.joined) session.removePlayer(client.id); });
+  socket.on('close', () => { clients.delete(socket); if (client.joined) session.disconnectPlayer(client.id); });
   socket.on('error', () => {});
 });
 
 setInterval(() => {
   session.step(tickMs / 1000);
+  for (const completed of session.takeCompletedLogouts()) {
+    const entry = [...clients.entries()].find(([, client]) => client.id === completed.id);
+    playerStore.save(completed.characterId, completed.state).then(() => {
+      if (entry?.[0].readyState !== WebSocket.OPEN) return;
+      entry[0].send(JSON.stringify({ type: 'logoutComplete' }));
+      entry[0].close(1000, 'logout_complete');
+    });
+  }
   if (session.tick % snapshotEveryTicks !== 0) return;
   for (const [socket, client] of clients) {
     if (socket.readyState === WebSocket.OPEN && client.joined) socket.send(JSON.stringify(session.snapshot(client.id)));
   }
   session.clearEvents();
 }, tickMs);
+
+setInterval(() => {
+  for (const player of session.players.values()) {
+    playerStore.save(player.characterId, session.serializePlayer(player));
+  }
+}, 5000);
 
 setInterval(() => {
   const now = Date.now();
@@ -94,7 +122,10 @@ server.listen(port, '0.0.0.0', () => {
   for (const address of lanAddresses()) console.log(`LAN: http://${address}:${port}`);
 });
 
-function shutdown() {
+async function shutdown() {
+  for (const player of session.players.values()) {
+    await playerStore.save(player.characterId, session.serializePlayer(player));
+  }
   for (const socket of clients.keys()) socket.close(1012, 'server_shutdown');
   server.close(() => process.exit(0));
 }

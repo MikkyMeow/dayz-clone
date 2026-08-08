@@ -6,7 +6,8 @@ import { landmarks } from './world.js';
 const ids = ['menu', 'gameover', 'hud', 'start', 'restart', 'hpText', 'hpBar',
   'hungerText', 'hungerBar', 'staminaText', 'staminaBar', 'weapon', 'message',
   'crouch', 'dodge', 'location', 'survivalTime', 'hands', 'heldItem', 'backpackButton',
-  'drop', 'backpack', 'closeBackpack', 'backpackItems'];
+  'drop', 'backpack', 'closeBackpack', 'backpackItems', 'pauseMenu', 'pauseMenuTitle',
+  'logoutStatus', 'resumeGame', 'leaveServer', 'cancelLogout'];
 ids.push('interact');
 
 export const ui = Object.fromEntries(ids.map(id => [id, document.querySelector(`#${id}`)]));
@@ -92,6 +93,15 @@ export function showGame() {
   ui.menu.classList.add('hidden');
   ui.gameover.classList.add('hidden');
   ui.hud.classList.remove('hidden');
+}
+
+export function showMainMenu() {
+  ui.pauseMenu.classList.add('hidden');
+  ui.pauseMenu.setAttribute('aria-hidden', 'true');
+  ui.backpack.classList.add('hidden');
+  ui.hud.classList.add('hidden');
+  ui.gameover.classList.add('hidden');
+  ui.menu.classList.remove('hidden');
 }
 
 export function showGameOver() {

@@ -84,6 +84,9 @@ canvas {
 .danger {
   color: #df7468 !important;
 }
+.danger-button { color: #fff0ed; background: #713f38; border-color: #b76a60; }
+.game-menu { z-index: 30; }
+.game-menu .card p:not(.eyebrow) { min-height: 2.8em; }
 button {
   border: 1px solid #84936f;
   border-radius: 2px;
@@ -374,6 +377,13 @@ button {
 @media (pointer: coarse) {
   #drop { display: grid; }
   #menu {
+    inset: 0 auto auto 0;
+    width: 200%;
+    height: 200%;
+    transform: scale(.5);
+    transform-origin: top left;
+  }
+  .game-menu {
     inset: 0 auto auto 0;
     width: 200%;
     height: 200%;

@@ -5,13 +5,68 @@ import { parseClientMessage, PROTOCOL_VERSION } from '../server/protocol.js';
 
 test('protocol validates joins and normalizes movement', () => {
   assert.deepEqual(parseClientMessage(Buffer.from(JSON.stringify({
-    type: 'join', protocolVersion: PROTOCOL_VERSION, name: '<Игрок>'
-  }))), { type: 'join', name: 'Игрок' });
+    type: 'join', protocolVersion: PROTOCOL_VERSION, name: '<Игрок>',
+    characterId: '12345678-1234-1234-1234-123456789abc'
+  }))), { type: 'join', name: 'Игрок', characterId: '12345678-1234-1234-1234-123456789abc' });
   const input = parseClientMessage(Buffer.from(JSON.stringify({
     type: 'input', seq: 1, moveX: 3, moveY: 4, angle: 0, run: true
   })));
   assert.equal(Math.hypot(input.moveX, input.moveY), 1);
   assert.throws(() => parseClientMessage(Buffer.from('{broken')), /invalid_json/);
+});
+
+test('logout keeps an AFK player alive for 15 seconds and can be cancelled', () => {
+  const session = new GameSession();
+  const player = session.addPlayer('socket', 'A', 'character');
+  player.x = 100; player.y = 100;
+  session.setInput(player.id, { seq: 1, moveX: 1, moveY: 0, angle: 0, run: true, crouch: false });
+  assert.equal(session.beginLogout(player.id), true);
+  session.step(10);
+  assert.equal(session.players.has(player.id), true);
+  assert.equal(player.x, 100);
+  assert.equal(session.cancelLogout(player.id), true);
+  session.step(6);
+  assert.equal(session.players.has(player.id), true);
+});
+
+test('completed logout returns persistent state and removes the world entity', () => {
+  const session = new GameSession();
+  const player = session.addPlayer('socket', 'A', 'character');
+  Object.assign(player, { x: 321, y: 654, food: 3 });
+  session.beginLogout(player.id);
+  session.step(15);
+  const [completed] = session.takeCompletedLogouts();
+  assert.equal(session.players.has(player.id), false);
+  assert.equal(completed.characterId, 'character');
+  assert.equal(completed.state.x, 321);
+  assert.equal(completed.state.y, 654);
+  assert.equal(completed.state.food, 3);
+});
+
+test('saved player state is restored at the saved position', () => {
+  const first = new GameSession();
+  const original = first.addPlayer('old', 'A', 'character');
+  Object.assign(original, { x: 500, y: 700, hp: 64, medkits: 2 });
+  const restored = new GameSession().addPlayer('new', 'A', 'character', first.serializePlayer(original));
+  assert.deepEqual({ x: restored.x, y: restored.y, hp: restored.hp, medkits: restored.medkits },
+    { x: 500, y: 700, hp: 64, medkits: 2 });
+});
+
+test('reconnecting during logout takes over the same live character', () => {
+  const session = new GameSession();
+  const original = session.addPlayer('old-socket', 'A', 'character');
+  Object.assign(original, { x: 432, y: 765, hp: 57, food: 4 });
+  session.disconnectPlayer(original.id);
+  session.step(5);
+  const liveState = { x: original.x, y: original.y, hp: original.hp, food: original.food };
+  const reconnected = session.reconnectPlayer('old-socket', 'new-socket', 'A');
+  assert.equal(reconnected, original);
+  assert.equal(session.players.has('old-socket'), false);
+  assert.equal(session.players.get('new-socket'), original);
+  assert.deepEqual({ x: reconnected.x, y: reconnected.y, hp: reconnected.hp, food: reconnected.food },
+    liveState);
+  assert.equal(reconnected.logoutAt, 0);
+  assert.equal(reconnected.connected, true);
 });
 
 test('server session owns movement and rejects stale input', () => {

@@ -39,10 +39,15 @@ function updateStick(event) {
 export function bindInput(actions) {
   addEventListener('keydown', event => {
     const key = event.key.toLowerCase();
+    if (key === 'escape' && !event.repeat) {
+      event.preventDefault();
+      actions.toggleGameMenu();
+      return;
+    }
+    if (actions.isMenuOpen?.()) return;
     keys.add(key);
     if ('1234'.includes(event.key)) actions.selectQuickSlot(Number(event.key) - 1);
     if (key === 'i' && !event.repeat) actions.toggleBackpack();
-    if (key === 'escape' && !event.repeat) actions.closeBackpack();
     if (key === 'c' && !event.repeat) actions.toggleCrouch();
     if (key === 'e' && !event.repeat) actions.interact();
     if (key === 'g' && !event.repeat) actions.dropHeldItem();

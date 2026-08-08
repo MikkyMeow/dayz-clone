@@ -7,8 +7,20 @@ import { recordSnapshot } from './performance.js';
 
 const PROTOCOL_VERSION = 1;
 
+function createCharacterId() {
+  const webCrypto = globalThis.crypto;
+  if (typeof webCrypto?.randomUUID === 'function') return webCrypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  if (typeof webCrypto?.getRandomValues === 'function') webCrypto.getRandomValues(bytes);
+  else for (let index = 0; index < bytes.length; index++) bytes[index] = Math.floor(Math.random() * 256);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map(value => value.toString(16).padStart(2, '0'));
+  return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10).join('')}`;
+}
+
 export class MultiplayerClient {
-  constructor({ onReady, onDisconnect }) {
+  constructor({ onReady, onDisconnect, onLogoutComplete, isInputEnabled }) {
     this.socket = null;
     this.playerId = null;
     this.seq = 0;
@@ -16,16 +28,29 @@ export class MultiplayerClient {
     this.pingTimer = null;
     this.lastAttackAt = 0;
     this.receivedSnapshot = false;
+    this.readyNotified = false;
     this.onReady = onReady;
     this.onDisconnect = onDisconnect;
+    this.onLogoutComplete = onLogoutComplete;
+    this.isInputEnabled = isInputEnabled;
+    this.intentionalClose = false;
   }
 
   connect(name) {
     return new Promise((resolve, reject) => {
+      this.intentionalClose = false;
+      this.readyNotified = false;
       const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
       const socket = this.socket = new WebSocket(`${scheme}://${location.host}/ws`);
       const timeout = setTimeout(() => { socket.close(); reject(new Error('Сервер не отвечает')); }, 7000);
-      socket.addEventListener('open', () => socket.send(JSON.stringify({ type: 'join', protocolVersion: PROTOCOL_VERSION, name })));
+      let characterId = localStorage.getItem('deadzone.characterId');
+      if (!characterId) {
+        characterId = createCharacterId();
+        localStorage.setItem('deadzone.characterId', characterId);
+      }
+      socket.addEventListener('open', () => socket.send(JSON.stringify({
+        type: 'join', protocolVersion: PROTOCOL_VERSION, name, characterId
+      })));
       socket.addEventListener('message', event => {
         recordSnapshot(typeof event.data === 'string' ? event.data.length : event.data?.byteLength || 0);
         let message;
@@ -33,13 +58,17 @@ export class MultiplayerClient {
         if (message.type === 'welcome') {
           clearTimeout(timeout); this.playerId = message.playerId; this.startTimers(); resolve();
         } else if (message.type === 'snapshot') this.applySnapshot(message);
+        else if (message.type === 'logoutComplete') {
+          this.intentionalClose = true;
+          this.onLogoutComplete?.();
+        }
         else if (message.type === 'error') showMessage(`Сервер: ${message.code}`);
       });
       socket.addEventListener('close', () => {
         clearTimeout(timeout); this.stopTimers();
         if (socket !== this.socket) return;
         if (!this.playerId) reject(new Error('Не удалось подключиться'));
-        else this.onDisconnect?.();
+        else if (!this.intentionalClose) this.onDisconnect?.();
       });
       socket.addEventListener('error', () => {});
     });
@@ -54,6 +83,7 @@ export class MultiplayerClient {
 
   close() {
     this.stopTimers(); this.playerId = null; this.receivedSnapshot = false;
+    this.readyNotified = false; this.intentionalClose = true;
     if (this.socket?.readyState <= WebSocket.OPEN) this.socket.close(1000, 'mode_change');
   }
 
@@ -63,6 +93,11 @@ export class MultiplayerClient {
 
   sendInput() {
     if (!state?.running) return;
+    if (this.isInputEnabled && !this.isInputEnabled()) {
+      this.send({ type: 'input', seq: ++this.seq, moveX: 0, moveY: 0, angle: state.player.angle,
+        run: false, crouch: state.player.crouching });
+      return;
+    }
     let moveX = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0);
     let moveY = (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0);
     if (sticks.move) { moveX = sticks.move.dx; moveY = sticks.move.dy; }
@@ -130,7 +165,10 @@ export class MultiplayerClient {
     state.nearbyDoor = findNearbyDoor(state.player);
     this.applyEvents(snapshot.events || []);
     updateUI();
-    this.onReady?.(); this.onReady = null;
+    if (!this.readyNotified) {
+      this.readyNotified = true;
+      this.onReady?.();
+    }
   }
 
   applyEvents(events) {

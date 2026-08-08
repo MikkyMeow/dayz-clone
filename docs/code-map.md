@@ -44,6 +44,7 @@
 | `server/index.js` | Static HTTP, `/health`, WebSocket lifecycle, rate limit, ticks/snapshots, shutdown. |
 | `server/protocol.js` | Версия, размер и синтаксическая валидация входящих сообщений. |
 | `server/game-session.js` | Авторитетная PvP-сессия: игроки, движение, combat, inventory, loot, doors, zombies, AOI snapshots. |
+| `server/player-store.js` | Загрузка и атомарная запись постоянного состояния PvP-персонажей. |
 
 ## Тесты
 
@@ -66,4 +67,3 @@
 | Изменение карты | world geometry, chunk rendering, obstacle grid, doors, navigation invalidation, server determinism |
 | Изменение AI | single FSM/perception/navigation и отдельно server AI; debug/tests/performance |
 | Новый UI | HTML ID, styles, `ui` registry, rendering/update lifecycle, touch safe areas/accessibility |
-

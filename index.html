@@ -134,6 +134,17 @@
       </div>
     </section>
 
+    <section id="pauseMenu" class="overlay game-menu hidden" aria-hidden="true">
+      <div class="card" role="dialog" aria-modal="false" aria-labelledby="pauseMenuTitle">
+        <p class="eyebrow">ГЛАВНОЕ МЕНЮ</p>
+        <h2 id="pauseMenuTitle">Игра продолжается</h2>
+        <p id="logoutStatus">Пока меню открыто, персонаж остаётся в мире.</p>
+        <button id="resumeGame">Вернуться в игру</button>
+        <button id="leaveServer" class="danger-button">Покинуть сервер</button>
+        <button id="cancelLogout" class="hidden">Отменить выход</button>
+      </div>
+    </section>
+
     <script src="config.js"></script>
     <script type="module" src="js/main.js"></script>
   </body>

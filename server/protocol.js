@@ -3,7 +3,7 @@ export const MAX_MESSAGE_BYTES = 4096;
 
 const actions = new Set([
   'attack', 'dodge', 'interact', 'equip', 'useItem', 'dropItem',
-  'assignQuickSlot', 'respawn', 'toggleCrouch'
+  'assignQuickSlot', 'respawn', 'toggleCrouch', 'beginLogout', 'cancelLogout'
 ]);
 
 const finite = value => typeof value === 'number' && Number.isFinite(value);
@@ -23,7 +23,10 @@ export function parseClientMessage(data) {
 
   if (message.type === 'join') {
     if (message.protocolVersion !== PROTOCOL_VERSION) throw new Error('version_mismatch');
-    return { type: 'join', name: sanitizeName(message.name) };
+    if (typeof message.characterId !== 'string' || !/^[a-f0-9-]{36}$/.test(message.characterId)) {
+      throw new Error('invalid_character_id');
+    }
+    return { type: 'join', name: sanitizeName(message.name), characterId: message.characterId };
   }
   if (message.type === 'ping') return { type: 'ping', sentAt: message.sentAt };
   if (message.type === 'input') {

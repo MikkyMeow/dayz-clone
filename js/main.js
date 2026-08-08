@@ -1,6 +1,6 @@
 import { updateEffects } from './effects.js';
 import { C } from './config.js';
-import { bindInput } from './input.js';
+import { bindInput, keys, pointer, sticks } from './input.js';
 import {
   assignQuickSlot, dodge, dropHeldItem, equipItem, interact, selectQuickSlot,
   toggleCrouch, updateGame, useHeldItem
@@ -9,13 +9,15 @@ import { MultiplayerClient } from './multiplayer-client.js';
 import { drawGame } from './renderer.js';
 import { beginMeasure, endMeasure, recordFrame } from './performance.js';
 import { resetState, state } from './state.js';
-import { closeBackpack, showGame, showMessage, toggleBackpack, ui, updateUI } from './ui.js';
+import { closeBackpack, showGame, showMainMenu, showMessage, toggleBackpack, ui, updateUI } from './ui.js';
 
 let lastFrame = 0;
 let animationFrame = 0;
 let mode = 'single';
 let accumulator = 0;
 let previousPlayerPose = { x: 0, y: 0, angle: 0 };
+let gameMenuOpen = false;
+let logoutRequested = false;
 const multiplayerStart = document.querySelector('#multiplayerStart');
 const playerName = document.querySelector('#playerName');
 const connectionStatus = document.querySelector('#connectionStatus');
@@ -28,8 +30,53 @@ const multiplayer = new MultiplayerClient({
   onDisconnect() {
     connectionStatus.textContent = 'Соединение с сервером потеряно';
     showMessage('Соединение потеряно');
-  }
+  },
+  onLogoutComplete() { returnToMainMenu(); },
+  isInputEnabled() { return !gameMenuOpen; }
 });
+
+function clearControls() {
+  keys.clear(); pointer.down = false; sticks.move = null; sticks.aim = null;
+}
+
+function renderGameMenu() {
+  const remaining = state?.player?.logoutAt
+    ? Math.max(0, state.player.logoutAt - state.time)
+    : C.network.logoutSeconds;
+  ui.pauseMenuTitle.textContent = logoutRequested ? 'Выход с сервера' : 'Игра продолжается';
+  ui.logoutStatus.textContent = logoutRequested
+    ? `Персонаж останется в мире ещё ${Math.ceil(remaining)} сек.`
+    : 'Пока меню открыто, персонаж остаётся в мире.';
+  ui.resumeGame.classList.toggle('hidden', logoutRequested);
+  ui.leaveServer.classList.toggle('hidden', logoutRequested);
+  ui.cancelLogout.classList.toggle('hidden', !logoutRequested);
+  ui.leaveServer.textContent = mode === 'multiplayer' ? 'Покинуть сервер' : 'В главное меню';
+}
+
+function openGameMenu() {
+  if (!state?.running) return;
+  closeBackpack(); clearControls(); gameMenuOpen = true;
+  ui.pauseMenu.classList.remove('hidden'); ui.pauseMenu.setAttribute('aria-hidden', 'false');
+  renderGameMenu();
+}
+
+function closeGameMenu() {
+  if (logoutRequested) return;
+  gameMenuOpen = false; ui.pauseMenu.classList.add('hidden');
+  ui.pauseMenu.setAttribute('aria-hidden', 'true'); clearControls();
+}
+
+function toggleGameMenu() {
+  if (logoutRequested) return;
+  if (gameMenuOpen) closeGameMenu(); else openGameMenu();
+}
+
+function returnToMainMenu() {
+  logoutRequested = false; gameMenuOpen = false;
+  if (state) state.running = false;
+  cancelAnimationFrame(animationFrame); multiplayer.close(); showMainMenu();
+  connectionStatus.textContent = '';
+}
 
 function loop(now) {
   if (!state?.running) return;
@@ -60,6 +107,7 @@ function loop(now) {
   const counts = drawGame();
   endMeasure('render');
   recordFrame(frameMs, { ...counts, particles: state.particles.length });
+  if (gameMenuOpen) renderGameMenu();
   animationFrame = requestAnimationFrame(loop);
 }
 
@@ -79,14 +127,14 @@ document.addEventListener('visibilitychange', () => {
 });
 
 function startGame() {
-  multiplayer.close(); mode = 'single'; resetState();
+  multiplayer.close(); mode = 'single'; logoutRequested = false; gameMenuOpen = false; resetState();
   updateUI(); showGame(); beginLoop();
 }
 
 async function startMultiplayer() {
   multiplayerStart.disabled = true;
   connectionStatus.textContent = 'Подключение…';
-  multiplayer.close(); mode = 'multiplayer'; resetState(); beginLoop();
+  multiplayer.close(); mode = 'multiplayer'; logoutRequested = false; gameMenuOpen = false; resetState(); beginLoop();
   try {
     await multiplayer.connect(playerName.value);
     connectionStatus.textContent = 'Ожидание состояния мира…';
@@ -121,7 +169,9 @@ bindInput({
   interact: () => route('interact', interact),
   selectQuickSlot: routeSelect,
   toggleBackpack,
-  toggleCrouch: routeCrouch
+  toggleCrouch: routeCrouch,
+  toggleGameMenu,
+  isMenuOpen: () => gameMenuOpen
 });
 document.querySelectorAll('[data-quick-slot]').forEach(button => {
   button.addEventListener('click', () => routeSelect(Number(button.dataset.quickSlot)));
@@ -134,6 +184,14 @@ ui.drop.addEventListener('click', () => route('dropItem', dropHeldItem));
 ui.backpackButton.addEventListener('click', () => toggleBackpack());
 ui.closeBackpack.addEventListener('click', closeBackpack);
 ui.backpack.addEventListener('click', event => { if (event.target === ui.backpack) closeBackpack(); });
+ui.resumeGame.addEventListener('click', closeGameMenu);
+ui.leaveServer.addEventListener('click', () => {
+  if (mode === 'single') { returnToMainMenu(); return; }
+  logoutRequested = true; clearControls(); multiplayer.action('beginLogout'); renderGameMenu();
+});
+ui.cancelLogout.addEventListener('click', () => {
+  multiplayer.action('cancelLogout'); logoutRequested = false; closeGameMenu();
+});
 ui.backpackItems.addEventListener('click', event => {
   const equip = event.target.closest('[data-equip]');
   const assign = event.target.closest('[data-assign]');
