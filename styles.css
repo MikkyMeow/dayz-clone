@@ -266,6 +266,18 @@ button {
   background: #2d3329e8;
   border-color: #7e896f;
 }
+#drop {
+  display: none;
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(235px, calc(env(safe-area-inset-bottom) + 221px));
+  padding: 9px;
+  pointer-events: auto;
+  color: #d9d3b8;
+  background: #382d29e8;
+  border-color: #8b7469;
+}
+#drop:disabled { opacity: .4; }
 .backpack-overlay {
   position: fixed;
   inset: 0;
@@ -340,6 +352,7 @@ button {
 }
 
 @media (pointer: coarse) {
+  #drop { display: grid; }
   #menu {
     inset: 0 auto auto 0;
     width: 200%;

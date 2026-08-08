@@ -11,11 +11,16 @@ import { doorIsBlocked, findNearbyDoor, moveCircle, toggleDoor } from './world.j
 import { spawnZombie, updateZombies } from './zombies.js';
 
 const weaponByItem = { knife: 1, pistol: 2 };
+const countKeyByItem = { knife: 'knife', pistol: 'pistol', food: 'food', medkit: 'medkits' };
+
+function itemCount(player, type) {
+  return player[countKeyByItem[type]] || 0;
+}
 
 export function equipItem(type) {
   if (!state || !['knife', 'pistol', 'food', 'medkit'].includes(type)) return;
   const player = state.player;
-  if ((type === 'food' && !player.food) || (type === 'medkit' && !player.medkits)) return;
+  if (!itemCount(player, type)) return;
   player.heldItem = type;
   if (weaponByItem[type]) player.weapon = weaponByItem[type];
   selectHeldItemUI();
@@ -82,9 +87,35 @@ export function useHeldItem() {
     showMessage('Раны обработаны');
   }
   if ((type === 'food' && !player.food) || (type === 'medkit' && !player.medkits)) {
-    player.heldItem = 'knife';
-    player.weapon = weaponByItem.knife;
+    player.heldItem = player.knife ? 'knife' : 'fists';
+    player.weapon = weaponByItem[player.heldItem] || 0;
   }
+  updateUI();
+}
+
+export function dropHeldItem() {
+  if (!state?.running) return;
+  const player = state.player;
+  const type = player.heldItem;
+  const countKey = countKeyByItem[type];
+  if (!countKey || !player[countKey]) return;
+
+  player[countKey]--;
+  state.loot.push({
+    type,
+    x: clamp(player.x + Math.cos(player.angle) * 42, 12, C.world.width - 12),
+    y: clamp(player.y + Math.sin(player.angle) * 42, 12, C.world.height - 12),
+    r: 9,
+    pickupDelay: .65
+  });
+  if (!player[countKey]) {
+    player.quickSlots = player.quickSlots.map(item => item === type ? null : item);
+  }
+  player.heldItem = 'fists';
+  player.weapon = 0;
+  player.pendingAttack = null;
+  player.attackTimer = 0;
+  showMessage('Предмет выброшен');
   updateUI();
 }
 
@@ -189,20 +220,25 @@ function updateSurvival(dt) {
 function pickupLoot() {
   const player = state.player;
   for (let i = state.loot.length - 1; i >= 0; i--) {
+    if (state.loot[i].pickupDelay > 0) continue;
     if (distance(player, state.loot[i]) >= C.loot.pickupDistance) continue;
     const loot = state.loot.splice(i, 1)[0];
     if (loot.type === 'food') {
       player.food++;
       showMessage('Найдена еда');
-    } else {
+    } else if (loot.type === 'medkit') {
       player.medkits++;
       showMessage('Найдена аптечка');
+    } else {
+      player[loot.type]++;
+      showMessage(loot.type === 'knife' ? 'Найден нож' : 'Найден пистолет');
     }
   }
 }
 
 export function updateGame(dt) {
   state.time += dt;
+  state.loot.forEach(loot => { loot.pickupDelay = Math.max(0, (loot.pickupDelay || 0) - dt); });
   updatePlayer(dt);
   updateCombat(dt);
   updateSurvival(dt);

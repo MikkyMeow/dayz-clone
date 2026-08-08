@@ -6,6 +6,10 @@ import { clamp } from './utils.js';
 import { buildings, landmarks, ponds } from './world.js';
 
 const MOBILE_CONTENT_SCALE = .5;
+const lootColors = {
+  food: ['#c7a34b', '#765922'], medkit: ['#e5e1d5', '#b84d46'],
+  knife: ['#b9c0bd', '#58615d'], pistol: ['#727a73', '#242925']
+};
 
 function contentScale() {
   return matchMedia('(max-width: 650px)').matches ? MOBILE_CONTENT_SCALE : 1;
@@ -88,9 +92,9 @@ function drawWorld() {
 
 function drawEntities() {
   state.loot.forEach(loot => {
-    ctx.fillStyle = loot.type === 'food' ? '#c7a34b' : '#e5e1d5';
+    ctx.fillStyle = lootColors[loot.type][0];
     ctx.fillRect(loot.x - 7, loot.y - 7, 14, 14);
-    ctx.fillStyle = loot.type === 'food' ? '#765922' : '#b84d46';
+    ctx.fillStyle = lootColors[loot.type][1];
     ctx.fillRect(loot.x - 3, loot.y - 3, 6, 6);
   });
   state.zombies.forEach(zombie => {

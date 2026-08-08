@@ -1,5 +1,5 @@
 import { bindInput } from './input.js';
-import { assignQuickSlot, dodge, equipItem, interact, selectQuickSlot, toggleCrouch, updateGame, useHeldItem } from './gameplay.js';
+import { assignQuickSlot, dodge, dropHeldItem, equipItem, interact, selectQuickSlot, toggleCrouch, updateGame, useHeldItem } from './gameplay.js';
 import { drawGame } from './renderer.js';
 import { resetState, state } from './state.js';
 import { closeBackpack, showGame, toggleBackpack, ui, updateUI } from './ui.js';
@@ -25,7 +25,7 @@ function startGame() {
   animationFrame = requestAnimationFrame(loop);
 }
 
-bindInput({ closeBackpack, dodge, interact, selectQuickSlot, toggleBackpack, toggleCrouch });
+bindInput({ closeBackpack, dodge, dropHeldItem, interact, selectQuickSlot, toggleBackpack, toggleCrouch });
 document.querySelectorAll('[data-quick-slot]').forEach(button => {
   button.addEventListener('click', () => selectQuickSlot(Number(button.dataset.quickSlot)));
 });
@@ -33,6 +33,7 @@ ui.crouch.addEventListener('click', toggleCrouch);
 ui.dodge.addEventListener('click', dodge);
 ui.interact.addEventListener('click', interact);
 ui.hands.addEventListener('click', useHeldItem);
+ui.drop.addEventListener('click', dropHeldItem);
 ui.backpackButton.addEventListener('click', () => toggleBackpack());
 ui.closeBackpack.addEventListener('click', closeBackpack);
 ui.backpack.addEventListener('click', event => { if (event.target === ui.backpack) closeBackpack(); });

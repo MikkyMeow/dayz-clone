@@ -45,6 +45,7 @@ export function bindInput(actions) {
     if (key === 'escape' && !event.repeat) actions.closeBackpack();
     if (key === 'c' && !event.repeat) actions.toggleCrouch();
     if (key === 'e' && !event.repeat) actions.interact();
+    if (key === 'g' && !event.repeat) actions.dropHeldItem();
     if (key === ' ' && !event.repeat) {
       event.preventDefault();
       actions.dodge();

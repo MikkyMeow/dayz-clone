@@ -6,7 +6,7 @@ import { landmarks } from './world.js';
 const ids = ['menu', 'gameover', 'hud', 'start', 'restart', 'hpText', 'hpBar',
   'hungerText', 'hungerBar', 'staminaText', 'staminaBar', 'weapon', 'message',
   'crouch', 'dodge', 'location', 'survivalTime', 'hands', 'heldItem', 'backpackButton',
-  'backpack', 'closeBackpack', 'backpackItems'];
+  'drop', 'backpack', 'closeBackpack', 'backpackItems'];
 ids.push('interact');
 
 export const ui = Object.fromEntries(ids.map(id => [id, document.querySelector(`#${id}`)]));
@@ -37,7 +37,7 @@ export function closeBackpack() { toggleBackpack(false); }
 
 export function renderBackpack() {
   if (!state) return;
-  const counts = { knife: 1, pistol: 1, food: state.player.food, medkit: state.player.medkits };
+  const counts = { knife: state.player.knife, pistol: state.player.pistol, food: state.player.food, medkit: state.player.medkits };
   const signature = JSON.stringify(counts);
   if (signature === backpackSignature && ui.backpackItems.children.length) return;
   backpackSignature = signature;
@@ -74,6 +74,7 @@ export function updateUI() {
     button.querySelector('span').textContent = itemNames[player.quickSlots[slot]] || 'Пусто';
   });
   selectHeldItemUI();
+  ui.drop.disabled = player.heldItem === 'fists';
   if (!ui.backpack.classList.contains('hidden')) renderBackpack();
   ui.interact.classList.toggle('hidden', !state.nearbyDoor);
   if (state.nearbyDoor) {
