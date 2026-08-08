@@ -50,7 +50,7 @@ export function resetState() {
       dodgeX: 0, dodgeY: 0, moveX: 0, moveY: 0,
       footstepDistance: 0
     },
-    zombies: [], loot: [], particles: [], shots: [], noises: [], spawnTimer: 0,
+    zombies: [], loot: [], remotePlayers: [], particles: [], shots: [], noises: [], spawnTimer: 0,
     nearbyDoor: null
   };
   seedLoot();

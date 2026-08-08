@@ -49,7 +49,10 @@ export const buildings = landmarks.flatMap(landmark =>
 );
 
 for (const building of buildings) {
-  for (const door of building.doors) door.building = building;
+  for (const door of building.doors) {
+    door.building = building;
+    door.id = `door-${buildings.indexOf(building)}-${building.doors.indexOf(door)}`;
+  }
 }
 
 function wallSegments(building, side) {
@@ -158,6 +161,20 @@ export function toggleDoor(door) {
     obstacles.push(door.obstacle);
   }
   return door.open;
+}
+
+export function getDoorStates() {
+  return buildings.flatMap(building => building.doors.map(door => ({ id: door.id, open: door.open })));
+}
+
+export function applyDoorStates(states) {
+  const byId = new Map(states.map(item => [item.id, Boolean(item.open)]));
+  for (const building of buildings) {
+    for (const door of building.doors) {
+      const open = byId.get(door.id);
+      if (open !== undefined && open !== door.open) toggleDoor(door);
+    }
+  }
 }
 
 resetDoors();

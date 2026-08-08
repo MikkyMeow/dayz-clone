@@ -107,8 +107,22 @@ function drawEntities() {
     }
     drawPerson(zombie, zombie.staggerTimer > 0 ? '#a1a985' : '#71815b', zombie.angle);
   });
+  for (const remote of state.remotePlayers || []) {
+    if (!remote.alive) continue;
+    drawPerson(remote, '#d96b5f', remote.angle, remote.crouching);
+    ctx.save();
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f4f0d7';
+    ctx.fillText(remote.name, remote.x, remote.y - remote.r - 12);
+    ctx.fillStyle = '#351b19';
+    ctx.fillRect(remote.x - 20, remote.y - remote.r - 8, 40, 4);
+    ctx.fillStyle = '#b84e43';
+    ctx.fillRect(remote.x - 20, remote.y - remote.r - 8, 40 * Math.max(0, remote.hp) / C.player.maxHealth, 4);
+    ctx.restore();
+  }
   const player = state.player;
-  drawPerson(player, C.weapons[player.weapon]?.color || C.weapons[0].color, player.angle, player.crouching);
+  if (player.alive !== false) drawPerson(player, C.weapons[player.weapon]?.color || C.weapons[0].color, player.angle, player.crouching);
   if (player.pendingAttack) {
     ctx.strokeStyle = '#e8dec0aa';
     ctx.lineWidth = 4;

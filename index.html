@@ -19,7 +19,12 @@
         <p class="eyebrow">МОБИЛЬНАЯ ВЫЖИВАЛКА</p>
         <h1>DeadZone</h1>
         <p>Ищи припасы, следи за голодом и не шуми без нужды.</p>
-        <button id="start">Начать выживание</button>
+        <div class="mode-actions">
+          <button id="start">Одиночная игра</button>
+          <input id="playerName" maxlength="20" autocomplete="nickname" placeholder="Имя игрока" value="Игрок" />
+          <button id="multiplayerStart">PvP — подключиться</button>
+          <p id="connectionStatus" class="connection-status" aria-live="polite"></p>
+        </div>
         <small
           >WASD / стрелки — движение · Shift — бег · C — присесть · E —
           действие · G — выбросить<br />Мышь — прицел · ЛКМ — атака · Пробел — рывок. Красный

@@ -15,6 +15,10 @@ body {
   background: #11130f;
   touch-action: none;
 }
+
+.mode-actions { display: grid; gap: 10px; margin: 18px 0; }
+.mode-actions input { box-sizing: border-box; width: 100%; padding: 12px 14px; border: 1px solid #68725f; border-radius: 4px; background: #171b15; color: #f1edda; font: inherit; }
+.connection-status { min-height: 1.2em; margin: 0; color: #c9b978; font-size: .9rem; }
 canvas {
   display: block;
   width: 100%;
