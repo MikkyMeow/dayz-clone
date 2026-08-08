@@ -37,6 +37,7 @@ function hitMelee(attack) {
 
 export function attack() {
   const player = state.player;
+  if (!['fists', 'knife', 'pistol'].includes(player.heldItem)) return;
   const weapon = C.weapons[player.weapon];
   if (player.cooldown > 0) return;
   if (!weapon.gun) {

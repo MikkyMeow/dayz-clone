@@ -42,7 +42,8 @@ export function resetState() {
     player: {
       x: spawn.x, y: spawn.y, r: C.player.radius,
       hp: C.player.maxHealth, hunger: C.player.maxHunger, stamina: C.player.maxStamina,
-      exhausted: false, crouching: false, angle: 0, weapon: 0,
+      exhausted: false, crouching: false, angle: 0, weapon: 1,
+      heldItem: 'knife', quickSlots: ['knife', 'pistol', null, null],
       food: 0, medkits: 0, cooldown: 0,
       attackTimer: 0, pendingAttack: null,
       dodgeTimer: 0, dodgeCooldown: 0, invulnerableTimer: 0,

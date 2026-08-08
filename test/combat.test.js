@@ -47,10 +47,10 @@ test('melee damage lands after the readable windup, not on button press', () => 
 
   attack();
   assert.equal(zombie.hp, C.zombie.health);
-  updateCombat(C.weapons[0].windup / 2);
+  updateCombat(C.weapons[1].windup / 2);
   assert.equal(zombie.hp, C.zombie.health);
-  updateCombat(C.weapons[0].windup);
-  assert.equal(zombie.hp, C.zombie.health - C.weapons[0].damage);
+  updateCombat(C.weapons[1].windup);
+  assert.equal(zombie.hp, C.zombie.health - C.weapons[1].damage);
   assert.ok(zombie.x > 140, 'a hit should create breathing room');
   assert.ok(zombie.staggerTimer > 0, 'a hit should interrupt the zombie');
 });
@@ -78,7 +78,7 @@ test('melee attacks do not start when all zombies are out of reach', () => {
   player.x = 100;
   player.y = 100;
   player.angle = 0;
-  stateModule.state.zombies.push(zombieAt(100 + C.weapons[0].range + 1, 100));
+  stateModule.state.zombies.push(zombieAt(100 + C.weapons[1].range + 1, 100));
 
   attack();
   assert.equal(player.pendingAttack, null);

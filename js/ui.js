@@ -5,17 +5,50 @@ import { landmarks } from './world.js';
 
 const ids = ['menu', 'gameover', 'hud', 'start', 'restart', 'hpText', 'hpBar',
   'hungerText', 'hungerBar', 'staminaText', 'staminaBar', 'weapon', 'message',
-  'crouch', 'dodge', 'foodCount', 'medkitCount', 'useFood', 'useMedkit', 'location', 'survivalTime'];
+  'crouch', 'dodge', 'location', 'survivalTime', 'hands', 'heldItem', 'backpackButton',
+  'backpack', 'closeBackpack', 'backpackItems'];
 ids.push('interact');
 
 export const ui = Object.fromEntries(ids.map(id => [id, document.querySelector(`#${id}`)]));
 let messageTimer = 0;
+let backpackSignature = '';
 
-export function selectWeaponUI(index) {
-  document.querySelectorAll('[data-slot]').forEach((button, slot) =>
-    button.classList.toggle('selected', slot === index)
+const itemNames = { fists: 'Кулаки', knife: 'Нож', pistol: 'Пистолет', food: 'Еда', medkit: 'Аптечка' };
+
+export function selectHeldItemUI() {
+  if (!state) return;
+  const held = state.player.heldItem;
+  ui.heldItem.textContent = itemNames[held];
+  ui.weapon.textContent = itemNames[held].toUpperCase();
+  document.querySelectorAll('[data-quick-slot]').forEach((button, slot) =>
+    button.classList.toggle('selected', state.player.quickSlots[slot] === held)
   );
-  ui.weapon.textContent = C.weapons[index].name;
+}
+
+export function toggleBackpack(force) {
+  if (!state?.running) return;
+  const open = force ?? ui.backpack.classList.contains('hidden');
+  ui.backpack.classList.toggle('hidden', !open);
+  ui.backpack.setAttribute('aria-hidden', String(!open));
+  if (open) renderBackpack();
+}
+
+export function closeBackpack() { toggleBackpack(false); }
+
+export function renderBackpack() {
+  if (!state) return;
+  const counts = { knife: 1, pistol: 1, food: state.player.food, medkit: state.player.medkits };
+  const signature = JSON.stringify(counts);
+  if (signature === backpackSignature && ui.backpackItems.children.length) return;
+  backpackSignature = signature;
+  ui.backpackItems.innerHTML = Object.entries(counts).map(([type, count]) => `
+    <div class="backpack-item ${count ? '' : 'empty'}">
+      <div><b>${itemNames[type]}</b><span>Количество: ${count}</span></div>
+      <button data-equip="${type}" ${count ? '' : 'disabled'}>В руки</button>
+      <div class="slot-assign" aria-label="Назначить быстрый слот">
+        ${[1, 2, 3, 4].map(number => `<button data-assign="${number - 1}" data-item="${type}" ${count ? '' : 'disabled'}>${number}</button>`).join('')}
+      </div>
+    </div>`).join('');
 }
 
 export function showMessage(message) {
@@ -37,8 +70,11 @@ export function updateUI() {
   const crouchAction = player.crouching ? 'Встать' : 'Присесть';
   ui.crouch.setAttribute('aria-label', crouchAction);
   ui.crouch.title = `${crouchAction} (C)`;
-  ui.foodCount.textContent = player.food;
-  ui.medkitCount.textContent = player.medkits;
+  document.querySelectorAll('[data-quick-slot]').forEach((button, slot) => {
+    button.querySelector('span').textContent = itemNames[player.quickSlots[slot]] || 'Пусто';
+  });
+  selectHeldItemUI();
+  if (!ui.backpack.classList.contains('hidden')) renderBackpack();
   ui.interact.classList.toggle('hidden', !state.nearbyDoor);
   if (state.nearbyDoor) {
     ui.interact.textContent = `E: ${state.nearbyDoor.open ? 'закрыть дверь' : 'открыть дверь'}`;

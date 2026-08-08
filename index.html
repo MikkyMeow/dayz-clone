@@ -97,14 +97,32 @@
           <path d="M3 7h7M2 12h6m-4 5h6M14 5l7 7-7 7m7-7H9" />
         </svg>
       </button>
-      <div id="inventory">
-        <button data-slot="0">1<br /><span>Кулаки</span></button>
-        <button data-slot="1">2<br /><span>Нож</span></button>
-        <button data-slot="2">3<br /><span>Пистолет</span></button>
-        <button id="useFood">Еда <b id="foodCount">0</b></button>
-        <button id="useMedkit">Аптечка <b id="medkitCount">0</b></button>
+      <button id="backpackButton" class="action-icon" aria-label="Открыть рюкзак" title="Рюкзак (I)">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M8 7V5a4 4 0 0 1 8 0v2M6 8h12l2 4v9H4v-9l2-4Zm2 4h8M7 16h10" />
+        </svg>
+      </button>
+      <div id="quickbar">
+        <button id="hands" aria-label="Использовать предмет в руках"><small>РУКИ</small><span id="heldItem">Нож</span></button>
+        <div id="quickSlots">
+          <button data-quick-slot="0"><b>1</b><span>Нож</span></button>
+          <button data-quick-slot="1"><b>2</b><span>Пистолет</span></button>
+          <button data-quick-slot="2"><b>3</b><span>Пусто</span></button>
+          <button data-quick-slot="3"><b>4</b><span>Пусто</span></button>
+        </div>
       </div>
     </div>
+
+    <section id="backpack" class="backpack-overlay hidden" aria-hidden="true">
+      <div class="backpack-panel" role="dialog" aria-modal="false" aria-labelledby="backpackTitle">
+        <header>
+          <div><p class="eyebrow">СНАРЯЖЕНИЕ</p><h2 id="backpackTitle">Рюкзак</h2></div>
+          <button id="closeBackpack" aria-label="Закрыть рюкзак">×</button>
+        </header>
+        <p class="backpack-hint">Игра продолжается. Возьмите предмет в руки или назначьте быстрый слот.</p>
+        <div id="backpackItems" class="backpack-items"></div>
+      </div>
+    </section>
 
     <script src="config.js"></script>
     <script type="module" src="js/main.js"></script>

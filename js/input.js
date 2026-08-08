@@ -40,9 +40,9 @@ export function bindInput(actions) {
   addEventListener('keydown', event => {
     const key = event.key.toLowerCase();
     keys.add(key);
-    if ('123'.includes(event.key)) actions.selectWeapon(Number(event.key) - 1);
-    if (key === 'f') actions.useItem('food');
-    if (key === 'h') actions.useItem('medkit');
+    if ('1234'.includes(event.key)) actions.selectQuickSlot(Number(event.key) - 1);
+    if (key === 'i' && !event.repeat) actions.toggleBackpack();
+    if (key === 'escape' && !event.repeat) actions.closeBackpack();
     if (key === 'c' && !event.repeat) actions.toggleCrouch();
     if (key === 'e' && !event.repeat) actions.interact();
     if (key === ' ' && !event.repeat) {

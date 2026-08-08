@@ -1,8 +1,8 @@
 import { bindInput } from './input.js';
-import { dodge, interact, selectWeapon, toggleCrouch, updateGame, useItem } from './gameplay.js';
+import { assignQuickSlot, dodge, equipItem, interact, selectQuickSlot, toggleCrouch, updateGame, useHeldItem } from './gameplay.js';
 import { drawGame } from './renderer.js';
 import { resetState, state } from './state.js';
-import { selectWeaponUI, showGame, ui, updateUI } from './ui.js';
+import { closeBackpack, showGame, toggleBackpack, ui, updateUI } from './ui.js';
 
 let lastFrame = 0;
 let animationFrame = 0;
@@ -18,7 +18,6 @@ function loop(now) {
 
 function startGame() {
   resetState();
-  selectWeaponUI(0);
   updateUI();
   showGame();
   lastFrame = performance.now();
@@ -26,14 +25,22 @@ function startGame() {
   animationFrame = requestAnimationFrame(loop);
 }
 
-bindInput({ dodge, interact, selectWeapon, toggleCrouch, useItem });
-document.querySelectorAll('[data-slot]').forEach(button => {
-  button.addEventListener('click', () => selectWeapon(Number(button.dataset.slot)));
+bindInput({ closeBackpack, dodge, interact, selectQuickSlot, toggleBackpack, toggleCrouch });
+document.querySelectorAll('[data-quick-slot]').forEach(button => {
+  button.addEventListener('click', () => selectQuickSlot(Number(button.dataset.quickSlot)));
 });
 ui.crouch.addEventListener('click', toggleCrouch);
 ui.dodge.addEventListener('click', dodge);
 ui.interact.addEventListener('click', interact);
-ui.useFood.addEventListener('click', () => useItem('food'));
-ui.useMedkit.addEventListener('click', () => useItem('medkit'));
+ui.hands.addEventListener('click', useHeldItem);
+ui.backpackButton.addEventListener('click', () => toggleBackpack());
+ui.closeBackpack.addEventListener('click', closeBackpack);
+ui.backpack.addEventListener('click', event => { if (event.target === ui.backpack) closeBackpack(); });
+ui.backpackItems.addEventListener('click', event => {
+  const equip = event.target.closest('[data-equip]');
+  const assign = event.target.closest('[data-assign]');
+  if (equip) equipItem(equip.dataset.equip);
+  if (assign) assignQuickSlot(Number(assign.dataset.assign), assign.dataset.item);
+});
 ui.start.addEventListener('click', startGame);
 ui.restart.addEventListener('click', startGame);

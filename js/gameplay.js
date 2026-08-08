@@ -5,15 +5,39 @@ import { keys, pointer, refreshMouseAim, sticks } from './input.js';
 import { emitNoise, updateNoises } from './noise.js';
 import { invalidateNavigation } from './navigation.js';
 import { state } from './state.js';
-import { showGameOver, showMessage, selectWeaponUI, updateUI } from './ui.js';
+import { showGameOver, showMessage, selectHeldItemUI, updateUI } from './ui.js';
 import { clamp, distance } from './utils.js';
 import { doorIsBlocked, findNearbyDoor, moveCircle, toggleDoor } from './world.js';
 import { spawnZombie, updateZombies } from './zombies.js';
 
-export function selectWeapon(index) {
-  if (!state || !C.weapons[index]) return;
-  state.player.weapon = index;
-  selectWeaponUI(index);
+const weaponByItem = { knife: 1, pistol: 2 };
+
+export function equipItem(type) {
+  if (!state || !['knife', 'pistol', 'food', 'medkit'].includes(type)) return;
+  const player = state.player;
+  if ((type === 'food' && !player.food) || (type === 'medkit' && !player.medkits)) return;
+  player.heldItem = type;
+  if (weaponByItem[type]) player.weapon = weaponByItem[type];
+  selectHeldItemUI();
+}
+
+export function selectQuickSlot(index) {
+  const player = state?.player;
+  const type = player?.quickSlots[index];
+  if (!type) return;
+  if (player.heldItem === type) {
+    player.heldItem = 'fists';
+    player.weapon = 0;
+    selectHeldItemUI();
+    return;
+  }
+  equipItem(type);
+}
+
+export function assignQuickSlot(index, type) {
+  if (!state || index < 0 || index > 3) return;
+  state.player.quickSlots[index] = type;
+  updateUI();
 }
 
 export function toggleCrouch() {
@@ -43,9 +67,10 @@ export function dodge() {
   player.attackTimer = 0;
 }
 
-export function useItem(type) {
+export function useHeldItem() {
   if (!state) return;
   const player = state.player;
+  const type = player.heldItem;
   if (type === 'food' && player.food) {
     player.food--;
     player.hunger = Math.min(C.player.maxHunger, player.hunger + C.loot.foodRestore);
@@ -55,6 +80,10 @@ export function useItem(type) {
     player.medkits--;
     player.hp = Math.min(C.player.maxHealth, player.hp + C.loot.medkitHeal);
     showMessage('Раны обработаны');
+  }
+  if ((type === 'food' && !player.food) || (type === 'medkit' && !player.medkits)) {
+    player.heldItem = 'knife';
+    player.weapon = weaponByItem.knife;
   }
   updateUI();
 }

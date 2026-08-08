@@ -104,7 +104,7 @@ function drawEntities() {
     drawPerson(zombie, zombie.staggerTimer > 0 ? '#a1a985' : '#71815b', zombie.angle);
   });
   const player = state.player;
-  drawPerson(player, C.weapons[player.weapon].color, player.angle, player.crouching);
+  drawPerson(player, C.weapons[player.weapon]?.color || C.weapons[0].color, player.angle, player.crouching);
   if (player.pendingAttack) {
     ctx.strokeStyle = '#e8dec0aa';
     ctx.lineWidth = 4;
